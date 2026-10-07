@@ -1,0 +1,7 @@
+APP CARTELLI CHIETI - versione installabile
+
+Questa cartella va messa online (indirizzo https). Poi:
+- Telefono Android (Chrome): apri il link > menu ⋮ > 'Installa app' / 'Aggiungi a schermata Home'
+- iPhone (Safari): apri il link > Condividi > 'Aggiungi alla schermata Home'
+- Altro PC (Chrome/Edge): apri il link > icona 'Installa' nella barra dell'indirizzo
+Dopo la prima apertura funziona anche senza rete (tranne la lettura delle foto con OCR).

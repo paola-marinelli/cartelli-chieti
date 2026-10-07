@@ -1,0 +1,1439 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Cartelli Chieti</title>
+<meta name="theme-color" content="#e3000f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cartelli">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+/* Layout: una colonna operativa. Carica -> controlla righe -> scarica PDF. Il rosso è quello dei cartelli. */
+:root{
+  --paper:#f7f6f4; --card:#ffffff; --ink:#1c1b1a; --muted:#6b6660; --line:#e2ded8; --field:#fbfaf9;
+  --red:#e3000f; --red-ink:#ffffff; --red-soft:#fde8e9;
+  --ok:#1d7a3e; --ok-soft:#e5f4ea; --blue:#1559c7; --blue-soft:#e6efff; --sun:#9a6a00; --sun-soft:#fff6d6; --orange:#e86a00; --orange-soft:#fff0e2; --violet:#6b3fd1; --violet-soft:#f0eaff; --warn:#a85d00; --warn-soft:#fdf1df; --bad:#c4000d; --bad-soft:#fde8e9;
+  --f-display:"Archivo", "Arial Narrow", Arial, sans-serif;
+  --f-body:"Archivo", Arial, Helvetica, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#141312; --card:#1d1c1b; --ink:#f1eee9; --muted:#a8a29b; --line:#33302d; --field:#252321;
+  --red:#ff2a36; --red-ink:#ffffff; --red-soft:#3a1517;
+  --ok:#5cc985; --ok-soft:#173222; --blue:#7fb0ff; --blue-soft:#16243d; --sun:#f3c84f; --sun-soft:#352b10; --orange:#ff9a45; --orange-soft:#3a2312; --violet:#b69cff; --violet-soft:#261d3d; --warn:#f2a64a; --warn-soft:#3a2a14; --bad:#ff5a62; --bad-soft:#3a1517; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#141312; --card:#1d1c1b; --ink:#f1eee9; --muted:#a8a29b; --line:#33302d; --field:#252321;
+  --red:#ff2a36; --red-ink:#ffffff; --red-soft:#3a1517;
+  --ok:#5cc985; --ok-soft:#173222; --blue:#7fb0ff; --blue-soft:#16243d; --sun:#f3c84f; --sun-soft:#352b10; --orange:#ff9a45; --orange-soft:#3a2312; --violet:#b69cff; --violet-soft:#261d3d; --warn:#f2a64a; --warn-soft:#3a2a14; --bad:#ff5a62; --bad-soft:#3a1517; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0;padding-inline:16px;padding-block:0 120px}
+.wrap{max-width:1440px;margin:0 auto}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:22px 14px;border-bottom:3px solid var(--red);margin-bottom:18px}
+h1{font-family:var(--f-display);font-stretch:75%;font-weight:900;font-size:clamp(30px,6vw,46px);line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase}
+h1 span{color:var(--red)}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
+.engine{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--muted)}
+.engine b{color:var(--ink)}
+h2{font-family:var(--f-display);font-stretch:85%;font-weight:800;font-size:19px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--red);color:var(--red-ink);font-size:14px;font-stretch:100%}
+section.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.loaders{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.drop.over{border-color:var(--red);background:var(--red-soft)}
+.drop p{margin:0;color:var(--muted);font-size:13px}
+.files{font-size:13px;color:var(--ink);word-break:break-word}
+textarea{width:100%;min-height:70px;resize:vertical;font:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink)}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:inherit;font-weight:600;font-size:14px;border-radius:7px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:8px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+button.primary{background:var(--red);border-color:var(--red);color:var(--red-ink)}
+button.primary:hover{filter:brightness(1.07)}
+button.primary.alt{background:var(--sun);border-color:var(--sun);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+button.small{font-size:12.5px;padding:5px 9px}
+label.file{position:relative;overflow:hidden}
+label.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.status{font-size:13px;color:var(--muted);min-height:1.2em;white-space:pre-wrap}
+.status.err{color:var(--bad)}
+.globals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld>span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+input[type=text],input[type=date],input[type=number],select{font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);width:100%;min-width:0}
+input.num{font-variant-numeric:tabular-nums;text-align:right}
+.bulk{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:12px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{border:1px solid var(--line);border-radius:9px;padding:10px;display:grid;grid-template-columns:1fr 220px;gap:12px;background:var(--card)}
+.item.off{opacity:.55}
+.item.esempio{border-style:dashed}
+.item .main{display:flex;flex-direction:column;gap:8px;min-width:0}
+.line1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.line1 .desc{flex:1 1 220px;font-weight:700;text-transform:uppercase}
+.line1 .cod{flex:0 0 92px;font-variant-numeric:tabular-nums}
+.line1 .gr{flex:0 0 86px;text-transform:uppercase}
+input.strong{font-weight:800}
+.side{display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--line);padding-left:12px;min-width:0}
+.side .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.seg.v{flex-direction:column}
+.seg.v button{text-align:left;justify-content:flex-start}
+.seg.v button+button{border-left:0;border-top:1px solid var(--line)}
+.cop{flex-direction:row!important;align-items:center;gap:8px!important}
+.cop input{width:70px}
+button.send{font-size:17px;padding:11px 30px;letter-spacing:.08em;font-weight:800}
+.idx{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;width:26px;text-align:right}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 10px;font-size:12.5px;background:var(--field)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--red);color:var(--red-ink)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+.grid2 .wide{grid-column:span 2}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.chip{padding:3px 8px;border-radius:999px;font-weight:600;font-size:12px}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.diff{background:var(--bad-soft);color:var(--bad)}
+.chip.nf{background:var(--field);color:var(--muted);border:1px solid var(--line)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chk{display:flex;align-items:center;gap:6px;padding:8px 0;font-size:13px}
+.chip.ex{background:var(--field);color:var(--muted);border:1px dashed var(--muted)}
+.thumb{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:flex-start;min-width:0}
+.thumb canvas{width:100%;height:auto;border:1px solid var(--line);background:#fff;border-radius:3px}
+.thumb small{color:var(--muted);font-size:11px}
+.x{margin-left:auto;color:var(--muted)}
+.empty{padding:26px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:9px}
+.printbar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:5}
+.printbar .wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.printbar .tot{font-size:13px;color:var(--muted);margin-right:auto;display:flex;flex-direction:column;gap:2px;min-width:0}
+.moti{font-size:13px;font-weight:700;color:var(--ok)}
+.hero{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:16px;padding:14px 16px;border-radius:12px;background:linear-gradient(90deg,var(--red-soft),var(--sun-soft),var(--blue-soft));border:1px solid var(--line)}
+.hs{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center}
+.hs span{grid-row:span 2;font-size:26px}
+.hs b{font-family:var(--f-display);font-weight:900;font-stretch:80%;text-transform:uppercase;font-size:18px;letter-spacing:.03em}
+.hs small{color:var(--muted);font-size:12px}
+.arrow{color:var(--red);font-size:20px;font-weight:900}
+.hero-msg{flex-basis:100%;margin:2px 0 0;font-size:13.5px;font-weight:600}
+@media (max-width:640px){.arrow{display:none}.hs{flex-basis:100%}.moti{display:none}.printbar{padding-block:6px}.printbar .wrap{flex-wrap:nowrap}.printbar .tc{padding:2px 6px;font-size:11.5px;margin:1px}button.send{padding:10px 16px;font-size:15px}}
+.pages{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.pages canvas{background:#fff;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.12);max-width:100%;height:auto}
+.legend{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.xl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;align-items:center;padding:12px;border-radius:8px;background:var(--field);border:1px solid var(--line);margin-bottom:14px}
+.xl p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.xl .status{grid-column:1/-1}
+@media (max-width:640px){.xl{grid-template-columns:1fr}}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:20}
+.dlg-box{background:var(--card);color:var(--ink);border-radius:12px;padding:20px;width:min(520px,100%);display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.dlg-box .status:empty{display:none}
+.dlg-box{max-height:100%;overflow:auto}
+.dlg-box .row-btns button{font-size:15px;padding:11px 16px}
+.plist{display:flex;flex-direction:column;gap:8px}
+.plist button{justify-content:flex-start;text-align:left}
+.viewbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.viewbar .seg button{font-size:13.5px;padding:8px 12px}
+.grp{font-family:var(--f-display);font-weight:800;font-stretch:85%;text-transform:uppercase;letter-spacing:.05em;font-size:15px;margin:8px 0 0;color:var(--red)}
+.sheetwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;max-height:70vh;overflow-y:auto}
+table.sheet{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+.sheet th{position:sticky;top:0;z-index:2;background:var(--field);text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:7px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
+.sheet td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle;background:var(--card)}
+.sheet td.c{text-align:center}
+.sheet td.idx{width:auto;color:var(--muted);font-size:11.5px;text-align:right;padding-right:6px}
+.sheet input[type=text],.sheet input[type=number],.sheet select{padding:5px 6px;font-size:13px;border-radius:4px}
+.sheet .w-cod{width:84px}.sheet input[data-k=soglia]{width:120px}.sheet .w-desc{width:300px}.sheet .w-s{width:76px}.sheet .w-int{width:170px}.sheet .w-cp{width:54px}
+.sheet .up{text-transform:uppercase}
+.sheet select[data-k=promo]{min-width:118px}.sheet select[data-k=unita]{min-width:92px}
+.sheet tr.off td{opacity:.45}
+.sheet tr.esempio td{background:var(--field)}
+.sheet td.miss input{background:var(--warn-soft);border-color:var(--warn)}
+.sheet th.fmtcol,.sheet td.fmtcol{position:sticky;right:0;z-index:1;box-shadow:-1px 0 0 var(--line)}
+.sheet th.fmtcol{z-index:3;color:var(--red)}
+.sheet select.fmt{font-weight:700;min-width:150px}
+
+.sheet tr.grp td{font-family:var(--f-display);font-weight:800;font-stretch:85%;text-transform:uppercase;letter-spacing:.05em;color:var(--red);background:var(--field);padding:8px}
+.vc{display:flex;flex-wrap:wrap;gap:3px;width:210px}
+.vc .chip{font-size:11px;padding:2px 6px}
+button.del{padding:4px 8px;color:var(--muted)}
+.tint-blue{background:var(--blue-soft);border-color:var(--blue)}
+.tint-blue strong{color:var(--blue)}
+.tint-sun{background:var(--sun-soft);border-color:var(--sun)}
+.tint-sun strong{color:var(--sun)}
+section.step:nth-of-type(2) h2 .n{background:var(--blue)}
+section.step:nth-of-type(3) h2 .n{background:var(--violet)}
+.f-A3{--fc:var(--red);--fs:var(--red-soft)}
+.f-G{--fc:var(--orange);--fs:var(--orange-soft)}
+.f-P{--fc:var(--blue);--fs:var(--blue-soft)}
+button.f-A3,button.f-G,button.f-P{background:var(--fs);border-color:var(--fc);color:var(--ink)}
+.sheet select.fmt.set{background:var(--fc);border-color:var(--fc);color:#fff}
+.sheet tr.row-A3 td:first-child{box-shadow:inset 4px 0 0 var(--red)}
+.sheet tr.row-G td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
+.sheet tr.row-P td:first-child{box-shadow:inset 4px 0 0 var(--blue)}
+.sheet tr.grp.g-G td{color:var(--orange)}
+.sheet tr.grp.g-P td{color:var(--blue)}
+.sheet th{background:var(--blue-soft)}
+.tc{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--fs, var(--field));border:1px solid var(--fc, var(--line));margin:2px 2px;color:var(--ink)}
+.face{font-size:16px}
+button.usa{padding:2px 7px;font-size:11px;border-color:var(--bad);color:var(--bad)}
+.found{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border:1px dashed var(--muted);border-radius:8px;font-size:13.5px}
+@media (max-width:640px){
+  .item{grid-template-columns:1fr}
+  .side{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:10px}
+  .seg.v{flex-direction:row;flex-wrap:wrap}
+  .seg.v button+button{border-top:0;border-left:1px solid var(--line)}
+  .thumb{max-width:260px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🏷️ Cartelli <span>Chieti</span></h1>
+      <p class="sub">📋 Elenco → 📰 controllo sul volantino → 🖨️ cartelli pronti da stampare</p>
+    </div>
+    <div class="engine" id="engine">Lettura: <b>controllo in corso…</b></div>
+  </header>
+
+  <div class="hero">
+    <div class="hs"><span>📥</span><b>Carica</b><small>elenco e volantino, anche in foto</small></div>
+    <div class="arrow">➜</div>
+    <div class="hs"><span>✍️</span><b>Scegli</b><small>il formato di ogni cartello</small></div>
+    <div class="arrow">➜</div>
+    <div class="hs"><span>📤</span><b>Invia</b><small>in stampa o come PDF</small></div>
+    <p class="hero-msg">💪 Tre passi e i cartelli sono pronti: prezzi presi dal volantino, niente più copia e incolla in PowerPoint.</p>
+  </div>
+
+  <section class="step">
+    <h2><span class="n">1</span>📥 Carica i file</h2>
+    <div class="loaders">
+      <div class="drop tint-blue" id="dropElenco">
+        <strong>📋 Elenco articoli</strong>
+        <p>Foto, PDF, Excel, CSV, Word o testo. Puoi caricare più foto insieme.</p>
+        <div class="row-btns">
+          <label class="btn file">📂 Scegli file elenco<input type="file" id="fElenco" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.txt,.docx"></label>
+          <button class="primary" id="bElenco" disabled>✨ Leggi elenco</button>
+        </div>
+        <div class="files" id="lsElenco"></div>
+        <textarea id="tElenco" placeholder="…oppure incolla qui l'elenco (una riga per articolo)"></textarea>
+        <div class="status" id="sElenco"></div>
+      </div>
+      <div class="drop tint-sun" id="dropVol">
+        <strong>📰 Volantino</strong>
+        <p>PDF o foto delle pagine. Confronta i prezzi dell'elenco, oppure crea l'elenco direttamente dal volantino (senza codici).</p>
+        <div class="row-btns">
+          <label class="btn file">📂 Scegli volantino<input type="file" id="fVol" multiple accept="image/*,.pdf"></label>
+          <button class="primary" id="bVol" disabled>🔍 Confronta prezzi</button>
+          <button class="primary alt" id="bVolList" disabled>📋 Carica elenco dal volantino</button>
+          <button id="bStop" hidden>⏹️ Ferma</button>
+        </div>
+        <div class="files" id="lsVol"></div>
+        <div class="status" id="sVol"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2><span class="n">2</span>✍️ Compila l'elenco e scegli il formato</h2>
+    <div class="globals">
+      <label class="fld" style="grid-column:1/-1"><span>🔎 Cerca per codice o descrizione</span><input type="text" id="q" placeholder="codice o parte della descrizione" autocomplete="off"></label>
+      <label class="fld"><span>📅 Fino al (tutti)</span><input type="date" id="gFino"></label>
+    </div>
+    <div class="bulk">
+      <span>Tutte le righe:</span>
+      <button class="small f-A3" data-all="A3">🟥 A3</button>
+      <button class="small f-G" data-all="G">🟧 Stopper grande</button>
+      <button class="small f-P" data-all="P">🟦 Stopper piccolo</button>
+      <button class="small" data-all="">⬜ Nessun formato</button>
+      <button class="small primary" id="bLoad2">📂 Carica elenco</button>
+      <button class="small" id="bAdd">➕ Aggiungi riga</button>
+      <button class="small" id="bClear">🗑️ Svuota elenco</button>
+      <button class="small" id="bXlsOut">💾 Salva selezione</button>
+      <span class="status" id="sXls"></span>
+    </div>
+    <div class="viewbar"><span>Mostra:</span><div class="seg" id="vista">
+      <button data-vista="tutte">📋 Tutto l'elenco <b id="nTutte"></b></button>
+      <button data-vista="stampa">🖨️ Solo da stampare <b id="nStampa"></b></button>
+    </div></div>
+    <div class="list" id="list"></div>
+    <p class="legend">Prezzo al Kg: se l'unità è all'etto e non è scritto nell'elenco viene calcolato (prezzo × 10) e segnato come calcolato. Lo sconto % nell'intestazione compare solo se è scritto nell'elenco o lo inserisci tu.</p>
+  </section>
+
+  <section class="step">
+    <h2><span class="n">3</span>👀 Anteprima fogli</h2>
+    <div class="row-btns"><button id="bPrev">👀 Mostra anteprima</button><span class="status" id="sPrev"></span></div>
+    <div class="pages" id="pages"></div>
+  </section>
+</div>
+
+<div class="printbar"><div class="wrap">
+  <div class="tot"><div id="tot"></div><div class="moti" id="moti"></div></div>
+  <button class="primary send" id="bSend">📤 INVIA</button>
+</div></div>
+
+<div class="dlg" id="sendDlg" hidden>
+  <div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="sendTitle">
+    <h2 id="sendTitle">📤 Invia i cartelli</h2>
+    <p class="status err" id="sendWarn"></p>
+    <div class="row-btns" id="sendChoice">
+      <button class="primary" id="bChoosePrint">🖨️ Scegli stampante</button>
+      <button class="primary" id="bChoosePdf">📄 Invia come PDF</button>
+    </div>
+    <div class="plist" id="printList" hidden></div>
+    <p class="status" id="sendMsg"></p>
+    <div class="row-btns"><button id="sendClose">✖️ Chiudi</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/*LAYOUT-START*/
+// Misure in punti tipografici, prese dai modelli in FORMATO CARTELLO (A3.pptx, STOPPER GRANGI.ppt, STOPPER PICCOLI.pptx)
+const RED = '#FF0000';
+const PB_BLUE = '#4695D2', PB_RED = '#E30613'; // colori del volantino (bollino Payback, Prendi/Spendi)
+const PAGE = { A3: { w: 1190.55, h: 841.89 }, A4: { w: 595.28, h: 841.89 } };
+const G_TOPS = [19, 218, 429, 623]; // modello: 13/212/423/617, abbassati di 6 pt per il margine della stampante
+const P_COLS = [92, 310];
+const P_ROWS = [
+  { d: 99, rect: 137, price: 278, fino: 297 },
+  { d: 342, rect: 371, price: 506, fino: 529 },
+  { d: 570, rect: 602, price: 733, fino: 750 },
+];
+const CAP = 0.716; // altezza maiuscole Arial/Helvetica in rapporto al corpo
+
+function num(s) {
+  if (s == null) return NaN;
+  let t = String(s).replace(/[€\s]/g, '');
+  if (!t) return NaN;
+  if (t.includes(',') && t.includes('.')) t = t.replace(/\./g, '');
+  t = t.replace(',', '.');
+  return /^-?\d*\.?\d+$/.test(t) ? parseFloat(t) : NaN;
+}
+function money(s) { const n = num(s); return isNaN(n) ? null : n.toFixed(2).replace('.', ','); }
+function pct(s) { if (s == null) return ''; const m = String(s).match(/\d+(?:[.,]\d+)?/); return m ? m[0].replace('.', ',') : ''; }
+
+function headerText(r, tipo) {
+  if (r.intest != null && String(r.intest).trim() !== '') return String(r.intest).trim();
+  const s = pct(r.sconto);
+  tipo = r.promo || 'OFFERTA';
+  if (tipo === 'FIDELITY') return s ? `SPESAMICA PAYBACK - ${s}%` : 'SPESAMICA PAYBACK';
+  if (tipo === 'WEEKEND') return 'PROMO WEEKEND';
+  if (tipo === 'PRENDI') return '+ PRENDI - SPENDI';
+  return s ? `OFFERTA – ${s}%` : 'OFFERTA';
+}
+function descFull(r) {
+  const d = String(r.desc || '').toUpperCase().trim(), g = String(r.gramm || '').toUpperCase().trim();
+  return g && !d.replace(/\s/g, '').endsWith(g.replace(/\s/g, '')) ? d + ' ' + g : d;
+}
+function unitLong(u) { return ({ "all'etto": 'all’etto', 'al pz': 'al pz', 'al kg': 'al kg', 'al litro': 'al litro' })[u] || ''; }
+function unitShort(u) { return ({ "all'etto": 'L’ etto', 'al pz': 'Al pz', 'al kg': 'Al kg', 'al litro': 'Al litro' })[u] || ''; }
+function kgValue(r) {
+  const k = money(r.kg);
+  if (k) return { v: k, calc: false };
+  if (r.unita === "all'etto") { const n = num(r.prezzo); if (!isNaN(n)) return { v: (Math.round(n * 100) / 10).toFixed(2).replace('.', ','), calc: true }; }
+  return null;
+}
+function kgText(r) { if (r.unita === 'al kg') return ''; const k = kgValue(r); return k ? `al Kg ${k.v} €` : ''; }
+function dateParts(s) {
+  if (!s) return null;
+  let m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return { d: m[3], m: m[2], y: m[1] };
+  m = String(s).match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?$/);
+  if (m) return { d: m[1].padStart(2, '0'), m: m[2].padStart(2, '0'), y: m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : '' };
+  return null;
+}
+function finoText(r, fino, long) {
+  const p = dateParts(r.fino || fino);
+  if (!p) return '';
+  return long && p.y ? `Fino al ${p.d}/${p.m}/${p.y}` : `Fino al ${p.d}/${p.m}`;
+}
+
+function fitSize(p, s, maxW, size, min, bold) {
+  while (size > min && p.w(s, size, bold) > maxW) size -= 1;
+  return size;
+}
+// a capo per parole: widths[i] = larghezza massima della riga i (l'ultima vale per le successive)
+function wrap(p, text, widths, size, bold) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = []; let cur = '';
+  for (const w of words) {
+    const lim = widths[Math.min(lines.length, widths.length - 1)];
+    const t = cur ? cur + ' ' + w : w;
+    if (!cur || p.w(t, size, bold) <= lim) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function fitsAll(p, lines, widths, size, bold) {
+  return lines.every((l, i) => p.w(l, size, bold) <= widths[Math.min(i, widths.length - 1)]);
+}
+function strike(p, s, x, y, size, bold, lw) {
+  p.text(s, x, y, { size, bold });
+  const w = p.w(s, size, bold);
+  p.line(x - size * 0.2, y - size * 0.27, x + w + size * 0.05, y - size * 0.27, lw);
+}
+// prezzo grande: intero grande, ",decimali" più piccoli, "€" a destra, tutti sulla stessa linea di base
+function bigPrice(p, prezzo, o) {
+  const m = money(prezzo);
+  if (!m) return;
+  const [i, d] = m.split(',');
+  const dec = ',' + d;
+  let k = 1;
+  const tot = p.w(i, o.si, true) + p.w(dec, o.sd, true) + o.gap + p.w('€', o.se, true);
+  if (o.right - tot < o.minLeft) k = (o.right - o.minLeft) / tot;
+  const xe = o.right - p.w('€', o.se * k, true);
+  p.text('€', xe, o.base, { size: o.se * k, bold: true });
+  const xd = xe - o.gap * k - p.w(dec, o.sd * k, true);
+  p.text(dec, xd, o.base, { size: o.sd * k, bold: true });
+  p.text(i, xd - p.w(i, o.si * k, true), o.base, { size: o.si * k, bold: true });
+}
+
+function fitDescA3(p, r) { const d = descFull(r); for (const s of [80, 72, 64, 58, 52]) if (wrap(p, d, [1110], s, true).length <= 2) return s; return 52; }
+function fitHeadA3(p, r) { return fitSize(p, headerText(r), PAGE.A3.w - 50, 160, 40, true); }
+function fitDescG(p, r) {
+  const d = descFull(r);
+  for (let s = 26; s >= 18; s--) if (p.w(d, s, true) <= 450) return s;
+  for (let s = 24; s >= 14; s--) { const l = wrap(p, d, [450, 235], s, true); if (l.length <= 2 && fitsAll(p, l, [450, 235], s, true)) return s; }
+  return 14;
+}
+function fitHeadG(p, r) { return fitSize(p, headerText(r), 445, 50, 18, true); }
+function fitDescP(p, r) { const d = descFull(r); for (let s = 22; s >= 13; s--) { const l = wrap(p, d, [205], s, true); if (l.length <= 2 && fitsAll(p, l, [205], s, true)) return s; } return 13; }
+function headPartsP(p, h, hs) {
+  const m = h.match(/^(.*?)\s*[–-]\s*(\d+(?:[.,]\d+)?\s*%)\s*$/);
+  return m ? [...wrap(p, m[1], [112], hs, true), '-' + m[2].replace(/\s/g, '')] : wrap(p, h, [112], hs, true);
+}
+function fitHeadP(p, r) { const h = headerText(r); for (let hs = 20; hs > 10; hs--) { const l = headPartsP(p, h, hs); if (l.length <= 2 && fitsAll(p, l, [112], hs, true)) return hs; } return 10; }
+// stessa grandezza di scritta per tutti i cartelli dello stesso formato: si rimpicciolisce solo chi non ci sta
+function uniform(p, fmt, items) {
+  const F = { A3: [fitDescA3, fitHeadA3, 64], G: [fitDescG, fitHeadG, 20], P: [fitDescP, fitHeadP, 16] }[fmt];
+  if (!F || !items.length) return null;
+  const desc = Math.max(F[2], Math.min(...items.map(r => F[0](p, r))));
+  const head = {};
+  items.forEach(r => { const k = r.promo || 'OFFERTA'; const v = F[1](p, r); head[k] = Math.min(head[k] || 999, v); });
+  return { desc, head };
+}
+const uSize = (ctx, r, kind, fitted) => { const u = ctx && ctx.u; if (!u) return fitted; const t = kind === 'desc' ? u.desc : u.head[r.promo || 'OFFERTA']; return t ? Math.min(fitted, t) : fitted; };
+
+function drawA3(p, r, ctx) {
+  const W = PAGE.A3.w;
+  p.rect(0, 0, W, 172, RED);
+  const h = headerText(r, ctx.tipo);
+  const hs = uSize(ctx, r, 'head', fitHeadA3(p, r));
+  if (r.promo === 'PRENDI' && (r.intest == null || String(r.intest).trim() === '')) prendiBand(p, W / 2, 0, 172, W - 60);
+  else p.text(h, W / 2, 86 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
+
+  const desc = descFull(r);
+  const size = uSize(ctx, r, 'desc', fitDescA3(p, r));
+  const lines = wrap(p, desc, [1110], size, true);
+  const step = size * 1.12;
+  let y = 278;
+  lines.forEach((l, n) => p.text(l, 40, y + n * step, { size, bold: true }));
+  let last = lines.length ? y + (lines.length - 1) * step : 214;
+  const u = unitLong(r.unita);
+  if (u) { last += 62; p.text(u, 40, last, { size: 42, bold: true }); }
+  const prima = money(r.prima);
+  if (prima) { last += 64; strike(p, `${prima} €`, 40, last, 55, true, 2.5); }
+  const sgA = r.promo === 'PRENDI' ? sogliaText(r) : '';
+  if (sgA && !prima) { last += 64; p.text(sgA, 40, last, { size: fitSize(p, sgA, 470, 50, 20, true), bold: true, color: PB_RED }); }
+
+  bigPrice(p, r.prezzo, { right: 1097, base: prima ? 735 : 700, si: 390, sd: 200, se: 121, gap: 8, minLeft: 300 });
+  const f = finoText(r, ctx.fino, true);
+  if (f) p.text(f, 86, 781, { size: 24, bold: true });
+  const kg = kgText(r);
+  if (kg) p.text(kg, 1010, 791, { size: 35, align: 'center' });
+}
+
+function drawG(p, r, slot, ctx) {
+  const R = G_TOPS[slot];
+  p.rect(70, R, 466, 60, RED, 12);
+  const h = headerText(r, ctx.tipo);
+  const hs = uSize(ctx, r, 'head', fitHeadG(p, r));
+  const prG = r.promo === 'PRENDI' && (r.intest == null || String(r.intest).trim() === '');
+  const hG = prG ? 'OFFERTA' : h, hsG = prG ? fitSize(p, 'OFFERTA', 445, 50, 18, true) : hs;
+  p.text(hG, 303, R + 30 + CAP * hsG / 2, { size: hsG, bold: true, color: '#FFFFFF', align: 'center' });
+
+  const desc = descFull(r);
+  const widths = [450, 235];
+  let size = uSize(ctx, r, 'desc', fitDescG(p, r)), lines = [desc];
+  if (p.w(desc, size, true) > 450) {
+    for (; size >= 14; size--) { lines = wrap(p, desc, widths, size, true); if (lines.length <= 2 && fitsAll(p, lines, widths, size, true)) break; }
+  }
+  const step = size * 1.1;
+  let y = R + 80;
+  lines.forEach((l, n) => p.text(l, 82, y + n * step, { size, bold: true }));
+  let last = y + (lines.length - 1) * step;
+  const u = unitLong(r.unita);
+  if (u) { last += 26; p.text(u, 82, last, { size: 24, bold: true }); }
+  const prima = money(r.prima);
+  if (prima) { last += 26; strike(p, `${prima} €`, 86, last, 24, true, 1.2); }
+  if (prG && !prima) {
+    // riquadro logo a sinistra, come nello stopper piccolo, e sotto la soglia
+    const sgG = sogliaText(r), top = last + 8, room = Math.min(R + 190, (slot < 3 ? G_TOPS[slot + 1] : 842) - 8) - top;
+    const LH = Math.min(32, Math.max(24, room - (sgG ? 17 : 0))), LW = LH * 122 / 56; // stessa misura su tutti (32 pt), più piccolo solo se non c'è spazio
+    prendiLogo(p, 82, top, LW, LH);
+    if (sgG) p.text(sgG, 82, top + LH + 14, { size: fitSize(p, sgG, 230, 14, 8, true), bold: true, color: PB_RED });
+  }
+
+  const lim = slot < 3 ? G_TOPS[slot + 1] : 842;
+  bigPrice(p, r.prezzo, { right: 518, base: Math.min(R + 180, lim - 22), si: 115, sd: 66, se: 44, gap: 4, minLeft: 250 });
+  const f = finoText(r, ctx.fino, false);
+  if (f) p.text(f, 307, Math.min(R + 193, lim - 7), { size: 9, align: 'center' });
+  const kg = kgText(r);
+  if (kg) p.text(kg, 468, Math.min(R + 196, lim - 6), { size: 14, align: 'center' });
+}
+
+// bollino fidelity come nel volantino: fascia azzurra "SPESAMICA PAYBACK" + blocco rosso "-20%" (colori presi dal PDF del volantino)
+function paybackBadge(p, x, y, r) {
+  const W = 122, HB = 15, HR = 41; // stesse misure del riquadro OFFERTA (122 x 56)
+  p.rect(x, y, W, HB, PB_BLUE);
+  p.rect(x, y + HB, W, HR, PB_RED);
+  let ts = 11; while (ts > 6 && p.w('SPESAMICA ', ts, false) + p.w('PAYBACK', ts, true) > W - 8) ts -= 0.5;
+  const tw = p.w('SPESAMICA ', ts, false) + p.w('PAYBACK', ts, true), tx = x + (W - tw) / 2, tb = y + HB / 2 + CAP * ts / 2;
+  p.text('SPESAMICA ', tx, tb, { size: ts, color: '#FFFFFF' });
+  p.text('PAYBACK', tx + p.w('SPESAMICA ', ts, false), tb, { size: ts, bold: true, color: '#FFFFFF' });
+  const sc = pct(r.sconto);
+  if (sc) {
+    const big = '-' + sc;
+    let s = 34; while (s > 14 && p.w(big, s, true) + p.w('%', s * 0.42, true) > W - 8) s -= 1;
+    const w1 = p.w(big, s, true), w2 = p.w('%', s * 0.42, true), bx = x + (W - w1 - w2) / 2, bb = y + HB + HR / 2 + CAP * s / 2;
+    p.text(big, bx, bb, { size: s, bold: true, color: '#FFFFFF' });
+    p.text('%', bx + w1 + 1, bb - CAP * s + CAP * s * 0.42, { size: s * 0.42, bold: true, color: '#FFFFFF' });
+  } else {
+    const hs = fitSize(p, 'OFFERTA', W - 8, 20, 10, true);
+    p.text('OFFERTA', x + W / 2, y + HB + HR / 2 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
+  }
+}
+
+// logo "+ PRENDI − SPENDI" ridisegnato (nel volantino è un'immagine troppo piccola per la stampa)
+function prendiLogo(p, x, y, W, H) {
+  p.rect(x, y, W, H, PB_RED, Math.min(10, H / 5));
+  const u = H / 56, cx = x + 17 * u, t = 7 * u;
+  p.rect(cx - 12 * u, y + 15 * u - t / 2, 24 * u, t, '#FFFFFF');
+  p.rect(cx - t / 2, y + 3 * u, t, 24 * u, '#FFFFFF');
+  p.rect(cx - 12 * u, y + 41 * u - t / 2, 24 * u, t, '#FFFFFF');
+  const tx = x + 34 * u, avail = W - 34 * u - 6 * u;
+  let ts = 22 * u; while (ts > 6 && p.w('PRENDI', ts, true) > avail) ts -= 0.5;
+  p.text('PRENDI', tx, y + 24 * u, { size: ts, bold: true, color: '#FFFFFF' });
+  p.text('SPENDI', tx, y + 48 * u, { size: ts, bold: true, color: '#FFFFFF' });
+}
+// fascia larga (stopper grande, A3): "+ PRENDI  − SPENDI" su una riga, segni disegnati
+function prendiBand(p, cx, y, H, maxW) {
+  let ts = H * 0.62; const gap = () => ts * 0.35, sym = () => ts * 0.72;
+  const tot = () => sym() + gap() + p.w('PRENDI', ts, true) + gap() * 2.5 + sym() + gap() + p.w('SPENDI', ts, true);
+  while (ts > 8 && tot() > maxW) ts -= 1;
+  let x = cx - tot() / 2; const mid = y + H / 2, t = ts * 0.2, base = mid + CAP * ts / 2;
+  p.rect(x, mid - t / 2, sym(), t, '#FFFFFF'); p.rect(x + sym() / 2 - t / 2, mid - sym() / 2, t, sym(), '#FFFFFF');
+  x += sym() + gap(); p.text('PRENDI', x, base, { size: ts, bold: true, color: '#FFFFFF' });
+  x += p.w('PRENDI', ts, true) + gap() * 2.5;
+  p.rect(x, mid - t / 2, sym(), t, '#FFFFFF');
+  x += sym() + gap(); p.text('SPENDI', x, base, { size: ts, bold: true, color: '#FFFFFF' });
+}
+function sogliaText(r) { const s = String(r.soglia || '').trim().toUpperCase(); return s ? s + ' A SOLI' : ''; }
+
+function drawP(p, r, slot, ctx) {
+  const x0 = P_COLS[slot % 2], R = P_ROWS[Math.floor(slot / 2)];
+  const desc = descFull(r);
+  const size = uSize(ctx, r, 'desc', fitDescP(p, r));
+  const lines = wrap(p, desc, [205], size, true);
+  lines.forEach((l, n) => p.text(l, x0, R.d + n * size * 0.98, { size, bold: true }));
+
+  const custom = !(r.intest == null || String(r.intest).trim() === '');
+  const badge = !custom && (r.promo === 'FIDELITY' || r.promo === 'PRENDI');
+  if (badge && r.promo === 'PRENDI') prendiLogo(p, x0, R.rect, 122, 56);
+  else if (badge) paybackBadge(p, x0, R.rect, r); else p.rect(x0, R.rect, 122, 56, RED, 10);
+  const h = headerText(r, ctx.tipo);
+  const hs = uSize(ctx, r, 'head', fitHeadP(p, r));
+  const hl = headPartsP(p, h, hs);
+  if (badge) { /* già disegnato */ }
+  else if (hl.length === 1) p.text(hl[0], x0 + 61, R.rect + 28 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
+  else hl.forEach((l, n) => p.text(l, x0 + 61, R.rect + 25 + n * (hs * 1.15), { size: hs, bold: true, color: '#FFFFFF', align: 'center' }));
+
+  const prima = money(r.prima);
+  if (prima) strike(p, `${prima} €`, x0 + 12, R.rect + 72, 16, false, 0.9);
+  const sg = r.promo === 'PRENDI' ? sogliaText(r) : '';
+  if (sg && !prima) p.text(sg, x0, R.rect + 71, { size: fitSize(p, sg, 200, 13, 7, true), bold: true, color: PB_RED });
+  bigPrice(p, r.prezzo, { right: x0 + 181, base: R.price, si: 88, sd: 45, se: 30, gap: 3, minLeft: x0 });
+  const f = finoText(r, ctx.fino, false);
+  if (f) p.text(f, x0 + 10, R.fino, { size: 12 });
+  const us = unitShort(r.unita);
+  if (us) p.text(us, x0 + 203, R.fino, { size: 12, align: 'right' });
+}
+
+// pagine: A3 = 1 cartello per foglio; G = 4 per foglio A4; P = 6 per foglio A4
+function paginate(items, fmt) {
+  const per = fmt === 'A3' ? 1 : fmt === 'G' ? 4 : 6;
+  const flat = [];
+  items.forEach(r => { const c = Math.max(1, Math.min(99, parseInt(r.copie, 10) || 1)); for (let i = 0; i < c; i++) flat.push(r); });
+  const pages = [];
+  for (let i = 0; i < flat.length; i += per) pages.push(flat.slice(i, i + per));
+  return pages;
+}
+function drawPage(p, fmt, page, ctx) {
+  page.forEach((r, s) => { if (fmt === 'A3') drawA3(p, r, ctx); else if (fmt === 'G') drawG(p, r, s, ctx); else drawP(p, r, s, ctx); });
+}
+
+class PdfPainter {
+  constructor(doc) { this.d = doc; }
+  font(size, bold) { this.d.setFont('helvetica', bold ? 'bold' : 'normal'); this.d.setFontSize(size); }
+  w(s, size, bold) { this.font(size, bold); return this.d.getTextWidth(s); }
+  text(s, x, y, o) { this.font(o.size, o.bold); this.d.setTextColor(o.color || '#000000'); this.d.text(s, x, y, { align: o.align || 'left', baseline: 'alphabetic' }); }
+  rect(x, y, w, h, col, r) { this.d.setFillColor(col); if (r) this.d.roundedRect(x, y, w, h, r, r, 'F'); else this.d.rect(x, y, w, h, 'F'); }
+  line(x1, y1, x2, y2, lw) { this.d.setDrawColor('#000000'); this.d.setLineWidth(lw); this.d.line(x1, y1, x2, y2); }
+}
+function buildPdf(jsPDF, fmt, items, ctx) {
+  const pages = paginate(items, fmt);
+  const doc = new jsPDF(fmt === 'A3' ? { orientation: 'landscape', unit: 'pt', format: 'a3' } : { orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const p = new PdfPainter(doc);
+  const c2 = Object.assign({}, ctx, { u: uniform(p, fmt, items) });
+  pages.forEach((pg, i) => { if (i) doc.addPage(); drawPage(p, fmt, pg, c2); });
+  return { doc, pages: pages.length };
+}
+/*LAYOUT-END*/
+
+class CanvasPainter {
+  constructor(ctx) { this.c = ctx; }
+  font(size, bold) { this.c.font = `${bold ? 700 : 400} ${size}px Arial, Helvetica, "Liberation Sans", sans-serif`; }
+  w(s, size, bold) { this.font(size, bold); return this.c.measureText(s).width; }
+  text(s, x, y, o) { this.font(o.size, o.bold); this.c.fillStyle = o.color || '#000'; this.c.textAlign = o.align || 'left'; this.c.textBaseline = 'alphabetic'; this.c.fillText(s, x, y); }
+  rect(x, y, w, h, col, r) {
+    const c = this.c; c.fillStyle = col; c.beginPath();
+    if (r) { c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+    else c.rect(x, y, w, h);
+    c.fill();
+  }
+  line(x1, y1, x2, y2, lw) { const c = this.c; c.strokeStyle = '#000'; c.lineWidth = lw; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+}
+
+/* ---------- stato ---------- */
+const $ = s => document.querySelector(s);
+const ESEMPI = [
+  { desc: 'PR.COTTO NOSTRI CAMPI GOLD FERRARINI', unita: "all'etto", prezzo: '1,89', formato: 'A3' },
+  { desc: 'SALAME MILANO FIORUCCI', unita: "all'etto", prezzo: '1,49', prima: '1,99', sconto: '25', formato: 'G' },
+  { desc: 'CIABATTA COME UNA VOLTA', gramm: '220GR', unita: 'al pz', prezzo: '1,29', formato: 'P' },
+];
+let uid = 1;
+function newRow(o) {
+  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
+}
+let state = { fino: '', tipo: 'OFFERTA', vista: 'tutte', rows: [] };
+function save() { try { localStorage.setItem('cartelli-chieti', JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try { const s = JSON.parse(localStorage.getItem('cartelli-chieti') || 'null'); if (s && Array.isArray(s.rows)) { state = Object.assign(state, s); state.rows = s.rows.map(r => newRow(r)); return true; } } catch (e) {}
+  return false;
+}
+function ctx() { return { fino: state.fino, tipo: state.tipo }; }
+
+/* ---------- librerie su richiesta ---------- */
+const loaded = {};
+function loadScript(src) {
+  if (!loaded[src]) loaded[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete loaded[src]; rej(new Error('Non riesco a caricare una libreria: controlla la connessione.')); }; document.head.appendChild(s); });
+  return loaded[src];
+}
+const LIB = {
+  pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfw: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  xlsx: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  docx: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',
+  ocr: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js',
+};
+async function pdfLib() { await loadScript(LIB.pdf); window.pdfjsLib.GlobalWorkerOptions.workerSrc = LIB.pdfw; return window.pdfjsLib; }
+
+/* ---------- Claude (solo dentro claude.ai) ---------- */
+let sample = null, imgMax = 0, downloads = null;
+async function initClaude() {
+  const eng = $('#engine');
+  if (!window.claude || !window.claude.use) { eng.innerHTML = '💻 Lettura: <b>locale</b> (foto con OCR)'; return; }
+  try {
+    const [s, d] = await Promise.all([window.claude.use('sample'), window.claude.use('downloads')]);
+    sample = s; downloads = d;
+    if (sample) { const l = await sample.limits().catch(() => null); imgMax = l && l.images ? l.images.maxCount : 0; }
+  } catch (e) { sample = null; }
+  eng.innerHTML = sample ? '🤖 Lettura: <b>Claude</b>' + (imgMax ? ' (anche foto)' : '') : '💻 Lettura: <b>locale</b> (foto con OCR)';
+}
+function sampleMsg(e) {
+  const c = e && e.code;
+  if (c === 'not_granted' || c === 'sampling_disabled') { sample = null; $('#engine').innerHTML = 'Lettura: <b>locale</b>'; return 'Lettura con Claude non autorizzata: uso la lettura locale.'; }
+  if (c === 'rate_limited') return 'Troppe richieste a Claude: riprova tra qualche minuto.';
+  if (c === 'cancelled') return 'Fermato.';
+  if (c === 'invalid_json') return 'La risposta di Claude non era leggibile: riprova.';
+  if (c === 'image_rejected') return 'Immagine non accettata: prova con una foto più piccola o in JPG.';
+  return 'Errore nella lettura (' + (c || (e && e.message) || 'sconosciuto') + '). Riprova.';
+}
+
+/* ---------- estrazione contenuto dai file ---------- */
+async function pdfDoc(file) { const lib = await pdfLib(); return lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise; }
+async function pdfPageText(page) {
+  const tc = await page.getTextContent();
+  const rows = [];
+  tc.items.forEach(it => { if (!it.str || !it.str.trim()) return; const y = Math.round(it.transform[5]); let r = rows.find(z => Math.abs(z.y - y) <= 3); if (!r) rows.push(r = { y, it: [] }); r.it.push({ x: it.transform[4], s: it.str }); });
+  rows.sort((a, b) => b.y - a.y);
+  return rows.map(r => r.it.sort((a, b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim()).join('\n');
+}
+async function pdfPageRaw(page) { const tc = await page.getTextContent(); return tc.items.map(i => i.str).filter(x => x && x.trim()).join('\n'); }
+async function pdfPageImages(page, halves) {
+  const vp0 = page.getViewport({ scale: 1 });
+  const scale = Math.min(3, 1700 / vp0.width);
+  const vp = page.getViewport({ scale });
+  const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+  await page.render({ canvasContext: c, viewport: vp }).promise;
+  if (!halves) return [await toBlob(cv)];
+  const out = []; const hh = Math.round(cv.height * 0.55);
+  for (const top of [0, cv.height - hh]) { const p = document.createElement('canvas'); p.width = cv.width; p.height = hh; p.getContext('2d').drawImage(cv, 0, top, cv.width, hh, 0, 0, cv.width, hh); out.push(await toBlob(p)); }
+  return out;
+}
+function toBlob(cv) { return new Promise(res => cv.toBlob(b => res(b), 'image/jpeg', 0.88)); }
+async function fileText(file) {
+  const n = file.name.toLowerCase();
+  if (/\.(xlsx|xls|csv)$/.test(n)) {
+    await loadScript(LIB.xlsx);
+    const wb = window.XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+    return wb.SheetNames.map(sn => { const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' }); return { sheet: sn, rows }; });
+  }
+  if (n.endsWith('.docx')) { await loadScript(LIB.docx); const r = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }); return r.value; }
+  if (n.endsWith('.txt')) return await file.text();
+  return null;
+}
+const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name);
+const isPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+
+/* ---------- interpretazione locale (senza Claude) ---------- */
+const RX_PRICE = /(\d{1,4}[.,]\d{1,2})(?!\s*%)/g;
+function unitFrom(s) {
+  const t = s.toLowerCase();
+  if (/\b(all'?\s*etto|l'?\s*etto|etto|hg)\b/.test(t)) return "all'etto";
+  if (/\b(al\s*kg|\/\s*kg|al\s*chilo)\b/.test(t)) return 'al kg';
+  if (/\b(al\s*pz|pz|cad|pezzo)\b/.test(t)) return 'al pz';
+  if (/\b(al\s*litro|\/\s*l(t|itro)?)\b/.test(t)) return 'al litro';
+  return '';
+}
+function parseLine(line) {
+  const s = String(line).replace(/\s+/g, ' ').trim();
+  if (!s) return null;
+  const prices = [...s.matchAll(RX_PRICE)].map(m => m[1]);
+  const pm = s.match(/(\d{1,2})\s*%/);
+  let desc = s.replace(RX_PRICE, ' ').replace(/-?\s*\d{1,2}\s*%/g, ' ').replace(/€|eur(o)?\b/gi, ' ')
+    .replace(/\b(all'?\s*etto|l'?\s*etto|al\s*kg|al\s*pz|al\s*litro)\b/gi, ' ').replace(/^\s*\d{4,}\s+/, ' ').replace(/\s+/g, ' ').trim();
+  const cod = (s.match(/^\s*(\d{4,})\s/) || [])[1] || '';
+  if (!/[a-zA-Z]{3,}/.test(desc) || !prices.length) return null;
+  const nums = prices.map(num);
+  let prezzo = prices[0], prima = '';
+  if (prices.length >= 2) { const lo = Math.min(...nums), hi = Math.max(...nums); prezzo = prices[nums.indexOf(lo)]; prima = prices[nums.indexOf(hi)]; }
+  const rim = /rimont/i.test(s); desc = desc.replace(/\brimont\w*/ig, ' ');
+  const fid = /\b(fidelity|payback|spesamica|carta)\b/i.test(desc);
+  desc = desc.replace(/\b(fidelity|payback|spesamica|carta)\b/ig, ' ').replace(/\s+/g, ' ').trim();
+  const gm = desc.match(/\b(\d+(?:[.,]\d+)?\s?(?:GR|G|KG|ML|CL|LT|L))\b\.?$/i);
+  if (gm) desc = desc.slice(0, gm.index).trim();
+  return { gramm: gm ? gm[1].toUpperCase().replace(/\s/g, '') : '', promo: fid ? 'FIDELITY' : 'OFFERTA', rimonta: rim, desc, prezzo: money(prezzo) || prezzo, prima: prima ? (money(prima) || prima) : '', sconto: pm ? pm[1] : '', unita: unitFrom(s), codice: cod };
+}
+function parseTable(rows) {
+  const norm = v => String(v == null ? '' : v).trim();
+  rows = rows.map(r => r.map(norm)).filter(r => r.some(Boolean));
+  if (!rows.length) return [];
+  const hi = rows.findIndex(r => r.some(c => /descr|articolo|prodotto/i.test(c)));
+  if (hi >= 0) {
+    const h = rows[hi].map(c => c.toLowerCase());
+    const col = re => h.findIndex(c => re.test(c));
+    const cD = col(/descr|articolo|prodotto|nome/), cP = col(/prezzo.*(offerta|promo|vendita)|scontat|prezzo\s*off|vendita\s*promo/);
+    const cPr = col(/listino|pieno|normale|prima|barrat|vecchio/);
+    const cG = col(/gramm|peso|^conf/), cT = col(/tipolog|^promo$|fidel|meccanica/);
+    const cS = col(/sconto|%/), cU = col(/^u\.?m|unit/), cC = col(/^cod|codice|plu|ean/), cK = col(/kg/);
+    const cP2 = cP >= 0 ? cP : col(/prezzo|pv|p\.v/);
+    return rows.slice(hi + 1).map(r => {
+      const desc = r[cD] || ''; if (!/[a-zA-Z]{2,}/.test(desc)) return null;
+      return { rimonta: r.some(c => /rimont/i.test(c)), gramm: cG >= 0 ? r[cG] : '', promo: cT >= 0 && /fidel|payback|carta|spesamica/i.test(r[cT]) ? 'FIDELITY' : 'OFFERTA', desc, prezzo: cP2 >= 0 ? (money(r[cP2]) || r[cP2]) : '', prima: cPr >= 0 && cPr !== cP2 ? (money(r[cPr]) || r[cPr]) : '', sconto: cS >= 0 ? pct(r[cS]) : '', unita: cU >= 0 ? unitFrom(r[cU]) : unitFrom(desc), codice: cC >= 0 ? r[cC] : '', kg: cK >= 0 && cK !== cP2 ? (money(r[cK]) || '') : '' };
+    }).filter(Boolean);
+  }
+  return rows.map(r => parseLine(r.join(' '))).filter(Boolean);
+}
+async function ocr(file, status) {
+  await loadScript(LIB.ocr);
+  const res = await window.Tesseract.recognize(file, 'ita', { logger: m => { if (m.status === 'recognizing text') status(`Leggo la foto ${file.name}… ${Math.round(m.progress * 100)}%`); } });
+  return res.data.text;
+}
+
+/* ---------- lettura elenco ---------- */
+const PROMPT_ELENCO = `Trascrivi l'elenco di articoli in offerta di un supermercato, per stampare i cartelli prezzo.
+REGOLE: trascrivi ESATTAMENTE quello che leggi. Non inventare, non correggere, non completare, non espandere abbreviazioni, non calcolare prezzi o sconti mancanti. Se un dato non c'è, metti null. Se una parte è illeggibile, scrivi cosa nel campo "dubbio". Ignora intestazioni, totali e righe che non sono articoli.
+Rispondi SOLO con un array JSON, un oggetto per articolo, nello stesso ordine dell'elenco:
+{"descrizione": string (senza la grammatura), "codice": string|null, "grammatura": string|null (es "220GR", "1KG", solo se scritta), "tipologia": "offerta"|"fidelity"|null (fidelity = sconto riservato ai possessori di carta fedeltà / Spesamica / Payback), "prezzo": string|null (prezzo di vendita in offerta, es "1,89"), "prezzo_prima": string|null (prezzo pieno/precedente, solo se scritto), "sconto": string|null (solo il numero della percentuale, solo se scritta), "unita": "all'etto"|"al pz"|"al kg"|"al litro"|null (solo se indicata), "prezzo_kg": string|null (solo se scritto), "fino_al": string|null (data di fine offerta se scritta), "rimonta": true|false (true solo se sulla riga è scritto RIMONTA), "dubbio": string|null}`;
+
+function fromAI(o) {
+  if (!o || !o.descrizione) return null;
+  const u = String(o.unita || '').toLowerCase();
+  const unita = /etto/.test(u) ? "all'etto" : /kg/.test(u) ? 'al kg' : /pz|pezz/.test(u) ? 'al pz' : /litr/.test(u) ? 'al litro' : '';
+  const tp = String(o.tipologia || '').toLowerCase();
+  return { gramm: o.grammatura ? String(o.grammatura).trim() : '', promo: /prendi/.test(tp) ? 'PRENDI' : /fidel|payback|carta|spesamica/.test(tp) ? 'FIDELITY' : 'OFFERTA', soglia: o.soglia ? String(o.soglia) : '', desc: String(o.descrizione).trim(), codice: o.codice ? String(o.codice) : '', prezzo: o.prezzo ? (money(o.prezzo) || String(o.prezzo)) : '', prima: o.prezzo_prima ? (money(o.prezzo_prima) || String(o.prezzo_prima)) : '', sconto: o.sconto ? pct(o.sconto) : '', unita, kg: o.prezzo_kg ? (money(o.prezzo_kg) || '') : '', fino: o.fino_al && dateParts(o.fino_al) ? String(o.fino_al) : '', rimonta: o.rimonta === true || /rimont/i.test(String(o.descrizione)), dubbio: o.dubbio ? String(o.dubbio) : '' };
+}
+async function aiRows(text, images, status) {
+  const input = PROMPT_ELENCO + (text ? '\n\nELENCO:\n' + text.slice(0, 120000) : '\n\nL\'elenco è nelle immagini allegate (nell\'ordine).');
+  const opts = { modelTier: 'default', onText: ({ text: t }) => status(`Claude sta leggendo… ${(t.match(/descrizione/g) || []).length} articoli`) };
+  if (images && images.length) opts.images = images;
+  const out = await sample.json(input, opts);
+  return (Array.isArray(out) ? out : []).map(fromAI).filter(Boolean);
+}
+function tableToText(t) { return t.map(s => `# Foglio ${s.sheet}\n` + s.rows.filter(r => r.some(c => String(c).trim())).map(r => r.join(' | ')).join('\n')).join('\n\n'); }
+
+async function readElenco() {
+  const files = [...$('#fElenco').files];
+  const pasted = $('#tElenco').value.trim();
+  const st = $('#sElenco'); const status = m => { st.classList.remove('err'); st.textContent = m; };
+  const btn = $('#bElenco'); btn.disabled = true;
+  try {
+    let found = [];
+    let texts = [], images = [], appRows = null;
+    if (pasted) texts.push(pasted);
+    for (const f of files) {
+      status('Apro ' + f.name + '…');
+      if (isImg(f)) images.push(f);
+      else if (isPdf(f)) {
+        const doc = await pdfDoc(f); let t = '';
+        for (let i = 1; i <= doc.numPages; i++) t += (await pdfPageText(await doc.getPage(i))) + '\n';
+        if (t.replace(/\s/g, '').length > 40) texts.push(t);
+        else for (let i = 1; i <= doc.numPages; i++) images.push(...await pdfPageImages(await doc.getPage(i), false));
+      } else {
+        const t = await fileText(f);
+        if (t == null) throw new Error('Formato non supportato: ' + f.name);
+        if (Array.isArray(t)) {
+          const app = t.map(sh => importAppRows(sh.rows)).find(Boolean); if (app) { appRows = (appRows || []).concat(app); continue; }
+          const tab = t.map(sh => importTabulato(sh.rows)).find(x => x && x.length); if (tab) { found.push(...tab); continue; }
+          if (sample) texts.push(tableToText(t)); else t.forEach(s => found.push(...parseTable(s.rows))); }
+        else texts.push(t);
+      }
+    }
+    if (appRows && !texts.length && !images.length) {
+      state.rows = appRows; state.vista = 'tutte'; save(); render(); goStep2();
+      status(`Excel dell'app ricaricato: ${appRows.length} righe con i formati scelti.`); return;
+    }
+    if (appRows) found.push(...appRows);
+    if (sample) {
+      if (texts.length) found.push(...await aiRows(texts.join('\n\n'), null, status));
+      if (images.length) {
+        if (!imgMax) throw new Error('Questa visualizzazione non può inviare foto a Claude.');
+        for (let i = 0; i < images.length; i += imgMax) { status(`Claude legge le foto ${i + 1}-${Math.min(images.length, i + imgMax)} di ${images.length}…`); found.push(...await aiRows(null, images.slice(i, i + imgMax), status)); }
+      }
+    } else {
+      for (const t of texts) found.push(...String(t).split(/\r?\n/).map(parseLine).filter(Boolean));
+      for (const f of images) { const t = await ocr(f, status); found.push(...t.split(/\r?\n/).map(parseLine).filter(Boolean).map(r => Object.assign(r, { dubbio: 'letto con OCR: controlla' }))); }
+    }
+    if (!found.length) { st.classList.add('err'); st.textContent = 'Nessun articolo trovato. Controlla il file o incolla l\'elenco nel riquadro.'; return; }
+    state.rows = found.map(o => newRow(o));
+    state.vista = 'tutte'; $('#q').value = '';
+    const senza = found.filter(o => !money(o.prezzo)).length;
+    status(`✅ Letti ${found.length} articoli.` + (senza ? ` ${senza} senza prezzo leggibile: sono segnati in arancio.` : '') + ' Ora scegli il formato di ogni riga 👉');
+    save(); render(); goStep2();
+  } catch (e) {
+    st.classList.add('err'); st.textContent = e && e.code ? sampleMsg(e) : (e.message || String(e));
+  } finally { btn.disabled = false; }
+}
+
+/* ---------- confronto volantino ---------- */
+let stopCtl = null;
+function promptVol(list, pageText) {
+  return `Questa è una pagina (o metà pagina) di un volantino di supermercato. Sotto c'è un elenco di articoli con un id.
+Per ogni articolo dell'elenco che compare in QUESTA immagine, riporta i dati ESATTAMENTE come stampati nel volantino. Non inventare. Non riportare articoli che non vedi. Se non sei sicuro che sia lo stesso prodotto (marca o grammatura diverse), metti "certezza":"media".
+Rispondi SOLO con un array JSON (vuoto se nessuno): [{"id": number, "descrizione_volantino": string, "grammatura": string|null, "prezzo": string (prezzo offerta), "prezzo_prima": string|null, "sconto": string|null (solo numero %), "tipologia": "offerta"|"fidelity"|null (fidelity = riservato a carta fedeltà/Spesamica/Payback), "unita": string|null, "certezza": "alta"|"media"}]
+ELENCO:
+${list}` + (pageText ? `\n\nTesto estratto dalla stessa pagina (può essere disordinato, usalo solo come aiuto):\n${pageText.slice(0, 6000)}` : '');
+}
+function normT(s) { return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, ' '); }
+const STOPW = new Set(['CON', 'PER', 'DEL', 'DELLA', 'DELLE', 'DEI', 'ALLA', 'ALLE', 'CONF', 'PZ', 'GR', 'KG', 'LT', 'ML', 'CAD', 'TIPI', 'VARI', 'ASSORTITO', 'ASSORTITI', 'LINEA', 'SU', 'TUTTA', 'DA', 'UO', 'IN']);
+function tokens(s) { return normT(s).replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !/^\d+$/.test(w) && !STOPW.has(w)); }
+function tokEq(a, b) { if (a === b) return true; const n = Math.min(a.length, b.length); if (n < 4) return false; const k = Math.min(n, 5); return a.slice(0, k) === b.slice(0, k); }
+function priceForms(p) { const n = num(p); if (isNaN(n)) return []; const f = [n.toFixed(2).replace('.', ',')]; if (f[0].endsWith(',00')) f.push(String(Math.round(n)) + ' €'); return f; }
+// trovato = stesso prezzo promo sulla pagina con almeno una parola forte della descrizione vicino (oppure "SU TUTTA LA LINEA" + marca + stesso sconto)
+function localMatch(rows, text) {
+  const L = normT(text).replace(/(\d)[ \t]*\n[ \t]*(,\d)/g, '$1$2').replace(/(\d)[ \t]*\n[ \t]*€/g, '$1 €').split(/\n/).map(l => l.trim()).filter(Boolean);
+  const res = [];
+  rows.forEach(r => {
+    const tk = tokens(r.desc); if (!tk.length) return;
+    const pf = priceForms(r.prezzo); let best = null;
+    L.forEach((l, i) => {
+      if (!pf.some(f => l.includes(f))) return;
+      const ww = tokens(L.slice(Math.max(0, i - 8), i + 12).join(' '));
+      const hit = tk.filter(t => ww.some(w => tokEq(t, w)));
+      const sc = hit.length / tk.length;
+      if (hit.length && (sc >= 0.34 || hit.some(h => h.length >= 5 || (/\d/.test(h) && /[A-Z]/.test(h)))) && (!best || sc > best.sc)) best = { sc, hit };
+    });
+    if (!best && r.sconto) L.forEach((l, i) => {
+      if (!/SU TUTTA LA LINEA/.test(l)) return;
+      const ww = tokens(L.slice(i, i + 4).join(' ')); const hit = tk.filter(t => t.length >= 4 && ww.some(w => tokEq(t, w)));
+      if (hit.length && new RegExp('(^|\\D)' + pct(r.sconto) + '(\\D|$)').test(L.slice(Math.max(0, i - 6), i + 6).join(' '))) best = { sc: 0, hit, linea: true };
+    });
+    if (best) { res.push({ id: r.id, descrizione_volantino: (best.linea ? 'Su tutta la linea ' : '') + best.hit.join(' '), prezzo: r.prezzo, sconto: best.linea ? r.sconto : null, certezza: 'alta' }); return; }
+    // descrizione trovata senza il prezzo dell'elenco: avviso con i prezzi stampati vicino
+    let near = null;
+    L.forEach((l, i) => {
+      const lt = tokens(L.slice(i, i + 3).join(' ')); const hit = tk.filter(t => lt.some(w => tokEq(t, w)));
+      const strong = hit.filter(h => h.length >= 5 || (/\d/.test(h) && /[A-Z]/.test(h)));
+      const sc = hit.length / tk.length;
+      if (!(strong.length >= 2 || (strong.length >= 1 && sc >= 0.67) || (strong.some(h => h.length >= 6) && sc >= 0.5))) return;
+      const cand = [];
+      for (let j = Math.max(0, i - 10); j < Math.min(L.length, i + 13); j++) (L[j].match(/\d{1,4},\d{2}/g) || []).forEach(x => cand.push({ x, d: Math.abs(j - (i + 1)) }));
+      const all = [...new Set(cand.sort((u, v) => u.d - v.d).map(c => c.x))];
+      const same = all.includes(money(r.prezzo));
+      const pr = all.filter(x => x !== money(r.prezzo) && x !== money(r.prima)).slice(0, 4);
+      if ((same || pr.length) && (!near || same > near.same || (same === near.same && sc > near.sc))) near = { sc, hit, pr, same, line: L.slice(i, i + 2).join(' ') };
+    });
+    if (near && near.same) res.push({ id: r.id, descrizione_volantino: near.hit.join(' '), prezzo: r.prezzo, certezza: 'alta' });
+    else if (near) res.push({ id: r.id, check: true, descrizione_volantino: near.line.slice(0, 60), candidati: near.pr });
+  });
+  return res;
+}
+function applyVol(matches, fonte) {
+  matches.forEach(m => {
+    const r = state.rows.find(x => x.id === Number(m.id)); if (!r) return;
+    if (m.check) { if (r.vol && r.vol.stato !== 'nf') return; r.vol = { stato: 'check', cand: m.candidati || [], desc: m.descrizione_volantino || '', fonte }; return; }
+    if (r.vol && r.vol.stato !== 'nf' && r.vol.cert === 'alta' && m.certezza !== 'alta') return;
+    const vp = money(m.prezzo);
+    const tp = String(m.tipologia || '').toLowerCase();
+    r.vol = { stato: 'found', prezzo: vp || (m.prezzo || ''), prima: money(m.prezzo_prima) || '', sconto: m.sconto ? pct(m.sconto) : '', gramm: m.grammatura || '', promo: tp ? (/fidel|payback|carta|spesamica/.test(tp) ? 'FIDELITY' : 'OFFERTA') : '', desc: m.descrizione_volantino || '', cert: m.certezza === 'alta' ? 'alta' : 'media', fonte };
+    applyPrice(r);
+  });
+}
+// griglia = dati dell'elenco caricato; il volantino vince, la griglia vale se l'articolo manca nel volantino o è RIMONTA
+function applyPrice(r) {
+  if (!r.griglia) r.griglia = { prezzo: r.prezzo, prima: r.prima, sconto: r.sconto, promo: r.promo };
+  const g = r.griglia, v = r.vol;
+  if (!r.rimonta && v && !['nf', 'check', 'man'].includes(v.stato) && money(v.prezzo)) {
+    r.prezzo = v.prezzo; r.prima = v.prima || g.prima; r.sconto = v.sconto || g.sconto; r.promo = v.promo || g.promo;
+  } else { r.prezzo = g.prezzo; r.prima = g.prima; r.sconto = g.sconto; r.promo = g.promo; }
+  volCheck(r);
+}
+function volCheck(r) {
+  const v = r.vol; if (!v || ['nf', 'check', 'man'].includes(v.stato)) return;
+  const g = r.griglia || r, d = [];
+  if (!money(v.prezzo) || money(g.prezzo) !== money(v.prezzo)) d.push('prezzo');
+  if (v.sconto && pct(g.sconto) !== v.sconto) d.push('sconto');
+  if (v.promo && (g.promo || 'OFFERTA') !== v.promo) d.push('tipologia');
+  v.diffs = d; v.stato = d.length ? 'diff' : 'ok';
+}
+async function readVol() {
+  const files = [...$('#fVol').files];
+  const st = $('#sVol'); const status = m => { st.classList.remove('err'); st.textContent = m; };
+  const rows = state.rows.filter(r => !r.esempio && r.desc && r.inVol !== 'N');
+  if (!rows.length) { st.classList.add('err'); st.textContent = 'Prima carica l\'elenco articoli.'; return; }
+  const btn = $('#bVol'); btn.disabled = true; const stopB = $('#bStop');
+  stopCtl = new AbortController(); stopB.hidden = !sample;
+  rows.forEach(r => { if (r.griglia) Object.assign(r, r.griglia); r.griglia = null; r.vol = { stato: 'nf' }; });
+  const list = rows.map(r => `${r.id}: ${r.desc}${r.gramm ? ' ' + r.gramm : ''}${r.codice ? ' (cod. ' + r.codice + ')' : ''}`).join('\n');
+  try {
+    let unit = 0, total = 0; const jobs = [];
+    for (const f of files) {
+      if (isPdf(f)) { const doc = await pdfDoc(f); for (let i = 1; i <= doc.numPages; i++) jobs.push({ f, doc, i }); }
+      else jobs.push({ f });
+    }
+    total = jobs.length;
+    for (const j of jobs) {
+      if (stopCtl.signal.aborted) break;
+      unit++;
+      const label = j.doc ? `${j.f.name} pag. ${j.i}` : j.f.name;
+      if (sample) {
+        let imgs, txt = '';
+        if (j.doc) { const pg = await j.doc.getPage(j.i); txt = await pdfPageText(pg); status(`Preparo ${label} (${unit}/${total})…`); imgs = await pdfPageImages(pg, imgMax >= 2); }
+        else imgs = [j.f];
+        if (!imgMax) { applyVol(localMatch(rows, await pdfPageRaw(await j.doc.getPage(j.i))), label); continue; }
+        status(`Claude cerca gli articoli in ${label} (${unit}/${total})…`);
+        const out = await sample.json(promptVol(list, txt), { images: imgs.slice(0, imgMax), signal: stopCtl.signal, modelTier: 'default' });
+        applyVol(Array.isArray(out) ? out : [], label);
+      } else {
+        status(`Leggo ${label} (${unit}/${total})…`);
+        const txt = j.doc ? await pdfPageRaw(await j.doc.getPage(j.i)) : await ocr(j.f, status);
+        applyVol(localMatch(rows, txt), label);
+      }
+      render();
+    }
+    const ok = rows.filter(r => r.vol.stato === 'ok').length, diff = rows.filter(r => r.vol.stato === 'diff').length, nf = rows.filter(r => r.vol.stato === 'nf').length;
+    const fuori = state.rows.filter(r => r.inVol === 'N').length;
+    const chk = rows.filter(r => r.vol.stato === 'check').length;
+    status(`✅ Confronto finito su ${rows.length} articoli a volantino: ${ok} trovati con lo stesso prezzo 👍, ${diff} presi dal volantino 📰, ${nf} non trovati in questo PDF ❓.` + (chk ? ` ⚠️ ${chk} con prezzo diverso: da controllare (righe con 😢).` : '') + (fuori ? ` ${fuori} articoli del tabulato non sono a volantino: non confrontati.` : '') + (nf > rows.length / 2 ? ' Molti non trovati: forse sono in un altro volantino?' : ''));
+  } catch (e) {
+    st.classList.add('err'); st.textContent = e && e.code ? sampleMsg(e) : (e.message || String(e));
+  } finally { btn.disabled = false; stopB.hidden = true; save(); render(); }
+}
+
+/* ---------- elenco creato dal volantino ---------- */
+// estrazione articoli dal volantino: items = [{x,y(dall'alto),s(corpo),t}]
+function volExtract(items, pageNo) {
+  const T = s => s.replace(/\s+/g, ' ').trim();
+  const it = items.map(i => ({ ...i, t: T(i.t) })).filter(i => i.t);
+  const isPriceSmall = t => /^\d{1,4},\d{2}(\s*€)?$/.test(t);
+  const NOISE = /O\s*PI[UÙ]$|^a lavaggio$|^\d+\s*pezz[oi]$|^-\s|^(SPESAMICA|PAYBACK|GUARDA|CHE|PREZZO!?|SU TUTTA LA LINEA|A SOLI)$|^al\s*kg|^all.?\s*etto|^al\s*pezzo|^al\s*litro|^[-%€]$|^\d+$|^-\s*\d+\s*%$/i;
+  // prezzi grandi
+  const anchors = [];
+  it.forEach(a => {
+    if (a.s < 15 || !/^\d{1,3}$/.test(a.t)) return;
+    const d = it.filter(b => b !== a && Math.abs(b.y - a.y) <= 7 && b.x > a.x && b.x - a.x <= 90 && /^,\d{2}(\s*€)?$|^€$/.test(b.t)).sort((p, q) => p.x - q.x)[0];
+    if (!d || a.s < d.s * 1.4) return;
+    if (it.some(b => b.s >= 15 && /^\d{1,3}$/.test(b.t) && b !== a && Math.abs(b.y - a.y) <= 7 && b.x > a.x && b.x < d.x)) return;
+    if (!d) return;
+    if (it.some(b => /A SOLI/i.test(b.t) && Math.abs(b.y - a.y) < 12 && b.x < a.x && a.x - b.x < 80)) return;
+    anchors.push({ x: a.x, y: a.y, s: a.s, prezzo: a.t + (d.t === '€' ? ',00' : d.t.replace(/[^\d,]/g, '')) });
+  });
+  // blocchi descrizione
+  const txt = it.filter(i => i.s >= 6.5 && i.s <= 14 && /[A-Za-zÀ-ÿ]/.test(i.t) && !NOISE.test(i.t) && !isPriceSmall(i.t)).sort((a, b) => a.y - b.y || a.x - b.x);
+  const blocks = [];
+  txt.forEach(i => {
+    const b = blocks.filter(b => Math.abs(b.x - i.x) <= 6 && i.y - b.bottom <= Math.max(15, i.s * 1.35) && i.y > b.bottom).sort((p, q) => (i.y - p.bottom) - (i.y - q.bottom))[0];
+    if (b) { b.lines.push(i); b.bottom = Math.max(b.bottom, i.y); } else blocks.push({ x: i.x, top: i.y, bottom: i.y, lines: [i] });
+  });
+  blocks.forEach(b => b.lines.sort((p, q) => p.y - q.y));
+  // abbinamento prezzo ↔ descrizione (più vicina sopra, stessa colonna)
+  const pairs = [];
+  anchors.forEach((a, ai) => blocks.forEach((b, bi) => {
+    if (b.x < a.x - 150 || b.x > a.x + 15 || b.bottom >= a.y - 5 || a.y - b.bottom > 175) return;
+    pairs.push({ ai, bi, sc: Math.hypot(a.x - b.x, a.y - b.bottom) });
+  }));
+  pairs.sort((p, q) => p.sc - q.sc);
+  const usedA = new Set(), usedB = new Set(), out = [];
+  pairs.forEach(p => { if (usedA.has(p.ai) || usedB.has(p.bi)) return; usedA.add(p.ai); usedB.add(p.bi); out.push({ a: anchors[p.ai], b: blocks[p.bi] }); });
+  const near = (a, f, dx0, dx1, dy0, dy1) => it.filter(i => i.x >= a.x + dx0 && i.x <= a.x + dx1 && i.y >= a.y + dy0 && i.y <= a.y + dy1 && f(i));
+  const n = t => parseFloat(t.replace(/[^\d,]/g, '').replace(',', '.'));
+  const seen = new Set();
+  // dinamica "+ PRENDI − SPENDI": "3 KG O PIÙ" / "A SOLI 0,79 €" / "al kg" vicino all'articolo
+  const prendi = [];
+  it.filter(i => /^A SOLI$/i.test(i.t)).forEach(sI => {
+    const pr = it.filter(i => /^\d{1,3},\d{2}$/.test(i.t) && i.s >= 14 && Math.abs(i.y - sI.y) <= 9 && i.x > sI.x && i.x - sI.x < 90).sort((p, q) => p.x - q.x)[0];
+    if (!pr) return;
+    const q = it.filter(i => /O\s*PI[UÙ]/i.test(i.t) && i.y < sI.y && sI.y - i.y < 45 && Math.abs(i.x - sI.x) < 100)[0];
+    const qn = q && it.filter(i => /^\d+$/.test(i.t) && Math.abs(i.y - q.y) <= 5 && i.x < q.x && q.x - i.x < 30)[0];
+    const un = it.filter(i => /^al\s*(kg|pezzo|litro)$/i.test(i.t) && i.y >= pr.y - 4 && i.y - pr.y < 22 && Math.abs(i.x - pr.x) < 90)[0];
+    let best = null;
+    const pv = n(pr.t);
+    out.forEach(o => { const ratio = pv / n(o.a.prezzo); const d = Math.hypot(o.a.x - sI.x, o.a.y - sI.y) + (ratio >= 0.5 && ratio < 1 ? 0 : 1000); if (d < 1320 && (!best || d < best.d)) best = { d, o }; });
+    if (best && best.d >= 1000) best = null;
+    if (best) prendi.push({ prod: best.o.a, prezzo: pr.t, soglia: q ? ((qn ? qn.t + ' ' : '') + q.t).replace(/\s+/g, ' ').toUpperCase() : '', unita: un ? (/kg/i.test(un.t) ? 'al kg' : /pezzo/i.test(un.t) ? 'al pz' : 'al litro') : '' });
+  });
+  return out.map(({ a, b }) => {
+    const prima = near(a, i => i.s < 12 && isPriceSmall(i.t) && n(i.t) > n(a.prezzo), -95, 45, -45, 22).sort((p, q) => Math.abs(p.y - a.y) - Math.abs(q.y - a.y))[0];
+    const scI = near(a, i => i.s >= 12 && i.s < a.s && /^\d{1,2}$/.test(i.t), -85, 45, -50, 6).find(i => it.some(j => j.t === '%' && Math.abs(j.x - i.x) < 70 && Math.abs(j.y - i.y) < 25));
+    const fid = near(a, i => /SPESAMICA|PAYBACK/i.test(i.t), -95, 50, -80, 8).length > 0;
+    const unitI = near(a, i => /^all.?\s*etto|^al\s*pezzo|^al\s*litro|^al\s*kg$/i.test(i.t), -10, 90, -6, 30)[0];
+    const kgI = near(a, i => /^al\s*kg\s*\d/i.test(i.t), -10, 90, -6, 30)[0];
+    const nPz = near(a, i => /^\d+\s*PEZZI$/i.test(i.t), -20, 140, -40, 2)[0];
+    let xm = '';
+    if (nPz) { const big = it.filter(i => i.s >= 15 && Math.abs(i.y - a.y) <= 8 && i.x < a.x && a.x - i.x < 150).sort((p, q) => p.x - q.x).map(i => i.t).join(''); const mm = big.match(/(\d+)x(\d+)/i); if (mm) xm = mm[1] + 'x' + mm[2]; }
+    let lines = b.lines.map(l => l.t);
+    let gramm = '';
+    const G = /^((conf\.?\s*)?\d+\s*(x\s*)?\d*([.,]\d+)?\s?(g|gr|kg|l|lt|ml|cl|pz|cm)\.?)$/i;
+    while (lines.length > 1 && G.test(lines[lines.length - 1])) { gramm = (lines.pop() + (gramm ? ' ' + gramm : '')); }
+    const u = unitI ? (/etto/i.test(unitI.t) ? "all'etto" : /pezzo/i.test(unitI.t) ? 'al pz' : /kg/i.test(unitI.t) ? 'al kg' : 'al litro') : '';
+    return {
+      desc: lines.join(' ').replace(/un\W*esempio\W*/i, ' ').replace(/\s+/g, ' ').trim(), gramm: gramm.toUpperCase(),
+      prezzo: a.prezzo, prima: prima ? prima.t.replace(/\s*€/, '') : '', sconto: scI ? scI.t : '',
+      promo: fid ? 'FIDELITY' : 'OFFERTA', unita: u, kg: kgI ? (kgI.t.match(/\d+,\d{2}/) || [''])[0] : '', pagina: pageNo, soglia: '', _a: a, intest: nPz && xm ? 'OFFERTA ' + xm : null, dubbio: nPz ? `prezzo per ${nPz.t.toLowerCase()}${xm ? ' (' + xm + ')' : ''}: controlla` : '',
+    };
+  }).filter(r => { const k = r.desc + '|' + r.prezzo; if (!r.desc || seen.has(k)) return false; seen.add(k); return true; })
+    .flatMap(r => { const pp = prendi.filter(x => x.prod === r._a).map(x => Object.assign({}, r, { prezzo: x.prezzo, prima: '', sconto: '', promo: 'PRENDI', soglia: x.soglia, unita: x.unita || r.unita, kg: '' })); delete r._a; pp.forEach(x => delete x._a); return [r, ...pp]; });
+}
+const PROMPT_VOLLIST = `Questa è una pagina di un volantino di supermercato. Elenca TUTTI gli articoli con un prezzo, trascrivendo ESATTAMENTE quello che è stampato. Non inventare, non completare. Salta le promozioni "su tutta la linea" senza prezzo.
+Rispondi SOLO con un array JSON: [{"descrizione": string (senza grammatura), "grammatura": string|null, "prezzo": string (prezzo offerta, es "1,39"), "prezzo_prima": string|null (prezzo barrato), "sconto": string|null (solo numero %), "tipologia": "offerta"|"fidelity"|"prendi_spendi" (fidelity se c'è SPESAMICA PAYBACK / carta fedeltà; prendi_spendi per "+ PRENDI − SPENDI": fai una riga in più con il prezzo "A SOLI"), "soglia": string|null (es "3 KG O PIÙ", solo prendi_spendi), "unita": "all'etto"|"al pz"|"al kg"|"al litro"|null, "prezzo_kg": string|null}]`;
+async function readVolList() {
+  const files = [...$('#fVol').files];
+  const st = $('#sVol'); const status = m => { st.classList.remove('err'); st.textContent = m; };
+  const btn = $('#bVolList'); btn.disabled = true;
+  try {
+    const found = [];
+    for (const f of files) {
+      if (isPdf(f)) {
+        const doc = await pdfDoc(f);
+        for (let i = 1; i <= doc.numPages; i++) {
+          status(`Leggo ${f.name}: pagina ${i} di ${doc.numPages}…`);
+          const pg = await doc.getPage(i); const vp = pg.getViewport({ scale: 1 }); const tc = await pg.getTextContent();
+          const items = tc.items.map(t => ({ x: t.transform[4], y: vp.height - t.transform[5], s: Math.hypot(t.transform[2], t.transform[3]), t: t.str }));
+          const rows = volExtract(items, i);
+          if (!rows.length && sample && imgMax && items.length < 5) {
+            status(`Claude legge la pagina ${i} (è un'immagine)…`);
+            const out = await sample.json(PROMPT_VOLLIST, { images: (await pdfPageImages(pg, imgMax >= 2)).slice(0, imgMax) });
+            (Array.isArray(out) ? out : []).forEach(o => { const r = fromAI(o); if (r) found.push(Object.assign(r, { pagina: i })); });
+          } else found.push(...rows.map(r => Object.assign(r, { fonte: f.name })));
+        }
+      } else if (isImg(f)) {
+        if (!sample || !imgMax) throw new Error('Le foto del volantino si leggono solo dalla versione online (claude.ai). Sul PC carica il volantino in PDF.');
+        status(`Claude legge ${f.name}…`);
+        const out = await sample.json(PROMPT_VOLLIST, { images: [f] });
+        (Array.isArray(out) ? out : []).forEach(o => { const r = fromAI(o); if (r) found.push(Object.assign(r, { pagina: f.name })); });
+      }
+    }
+    if (!found.length) { st.classList.add('err'); st.textContent = 'Nessun articolo con prezzo trovato nel volantino.'; return; }
+    state.rows = found.map(o => newRow(Object.assign({}, o, o.promo === 'PRENDI' ? { vol: null, dubbio: '' } : { dubbio: o.dubbio || (String(o.desc || '').trim().split(/\s+/).length < 2 ? 'descrizione corta: controlla' : ''), vol: { stato: 'ok', prezzo: o.prezzo, prima: o.prima || '', sconto: o.sconto || '', promo: o.promo, desc: '', cert: 'alta', fonte: 'pag. ' + o.pagina } })));
+    state.vista = 'tutte'; $('#q').value = ''; save(); render(); goStep2();
+    const fid = found.filter(o => o.promo === 'FIDELITY').length;
+    const pre = found.filter(o => o.promo === 'PRENDI').length;
+    status(`✅ Elenco creato dal volantino: ${found.length} cartelli (${fid} fidelity con carta Spesamica Payback${pre ? `, ${pre} + Prendi − Spendi` : ''}). Senza codici: controlla le descrizioni e scegli il formato 👉`);
+  } catch (e) { st.classList.add('err'); st.textContent = e && e.code ? sampleMsg(e) : (e.message || String(e)); }
+  finally { btn.disabled = !$('#fVol').files.length; }
+}
+
+/* ---------- interfaccia elenco ---------- */
+const FMT = [['A3', 'A3'], ['G', 'Stopper grande'], ['P', 'Stopper piccolo'], ['', 'Nessuno']];
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+const PROMO = [['OFFERTA', '🔥 Offerta'], ['FIDELITY', '💳 Fidelity'], ['PRENDI', '➕ Prendi/Spendi'], ['WEEKEND', '🎉 Weekend']];
+const UNITA = [['', '—'], ["all'etto", "all'etto"], ['al pz', 'al pz'], ['al kg', 'al kg'], ['al litro', 'al litro']];
+function volCell(r) {
+  const v = r.vol, g = r.griglia || {};
+  const c = [];
+  if (v) {
+    if (v.stato === 'nf') c.push('<span class="chip nf">❓ non nel volantino · griglia</span>');
+    else if (v.stato === 'check') { c.push(`<span class="chip diff" title="${esc(v.desc)}">⚠️ Controlla: ${esc(v.fonte || '')} prezzo ${esc(v.cand.join(' / '))} €</span>`); v.cand.forEach(x => c.push(`<button class="small usa" data-act="usa" data-p="${esc(x)}">Usa ${esc(x)}</button>`)); }
+    else if (v.stato === 'man') c.push('<span class="chip ok">✍️ controllato a mano</span>');
+    else if (r.rimonta) c.push(`<span class="chip warn">↩️ RIMONTA · vol. ${esc(v.prezzo || '?')}</span>`);
+    else if (v.stato === 'ok') c.push(`<span class="chip ok">✅ = volantino${!r.griglia && v.fonte ? ' · ' + esc(v.fonte) : ''}</span>`);
+    else c.push(`<span class="chip diff" title="${esc((v.diffs || []).join(', '))}">📰 volantino · griglia era ${esc(g.prezzo || '?')}${g.sconto ? ' -' + esc(g.sconto) + '%' : ''}</span>`);
+    if (v.cert === 'media' && v.stato !== 'nf') c.push('<span class="chip warn">⚠️ da verificare</span>');
+  }
+  if (r.inVol === 'N' && !v) c.push('<span class="chip nf">📋 non a volantino</span>');
+  if (r.esempio) c.push('<span class="chip ex">🧪 esempio</span>');
+  if (r.dubbio) c.push(`<span class="chip warn" title="${esc(r.dubbio)}">🤔 ${esc(r.dubbio.slice(0, 30))}</span>`);
+  const tip = v && v.desc ? ` title="${esc(v.desc + (v.gramm ? ' ' + v.gramm : '') + (v.fonte ? ' · ' + v.fonte : ''))}"` : '';
+  return `<div class="vc"${tip}>${c.join('')}</div>`;
+}
+function rowOk(r) { return !!money(r.prezzo) && !r.dubbio && !(r.vol && (r.vol.stato === 'check' || (r.vol.stato !== 'nf' && r.vol.cert === 'media'))); }
+function face(r) { return rowOk(r) ? '😊' : '😢'; }
+function rowHtml(r, n) {
+  const kv = kgValue(r);
+  const sel = (k, opts, id, cls) => `<select data-k="${k}" id="${id}${r.id}"${cls ? ` class="${cls}"` : ''}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${(r[k] || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const t = (k, id, cls, ph) => `<input type="text" data-k="${k}" id="${id}${r.id}" value="${esc(r[k] == null ? '' : r[k])}"${cls ? ` class="${cls}"` : ''}${ph ? ` placeholder="${esc(ph)}"` : ''}>`;
+  const noP = !money(r.prezzo);
+  return `<tr data-id="${r.id}" class="${r.on ? '' : 'off'}${r.esempio ? ' esempio' : ''}${r.formato ? ' row-' + r.formato : ''}">
+  <td class="c"><input type="checkbox" data-k="on" ${r.on ? 'checked' : ''} aria-label="Includi" id="on${r.id}"></td>
+  <td class="idx"><span class="face" title="${rowOk(r) ? 'Cartello a posto' : 'Da sistemare: prezzo mancante o dato da verificare'}">${face(r)}</span> ${n}</td>
+  <td>${t('codice', 'co', 'w-cod num')}</td>
+  <td>${t('desc', 'de', 'w-desc up')}</td>
+  <td>${t('gramm', 'gr', 'w-s up')}</td>
+  <td>${sel('promo', PROMO, 'tp')}</td>
+  <td>${t('soglia', 'so', 'w-s up', r.promo === 'PRENDI' ? 'es. 3 KG O PIÙ' : '')}</td>
+  <td class="c"><input type="checkbox" data-k="rimonta" ${r.rimonta ? 'checked' : ''} aria-label="Rimonta" id="rm${r.id}"></td>
+  <td>${t('sconto', 'sc', 'w-s num')}</td>
+  <td${noP ? ' class="miss"' : ''}>${t('prezzo', 'pz', 'w-s num strong')}</td>
+  <td>${t('prima', 'pr', 'w-s num')}</td>
+  <td>${sel('unita', UNITA, 'un')}</td>
+  <td>${t('kg', 'kg', 'w-s num', kv && kv.calc ? kv.v : '')}</td>
+  <td>${t('fino', 'fi', 'w-s', finoText({}, state.fino, true).replace('Fino al ', '') || 'gg/mm')}</td>
+  <td><input type="text" data-k="intest" id="in${r.id}" class="w-int" value="${esc(r.intest == null ? '' : r.intest)}" placeholder="${esc(headerText(Object.assign({}, r, { intest: null })))}" list="intList"></td>
+  <td>${volCell(r)}</td>
+  <td><input type="number" min="1" max="99" class="num w-cp" data-k="copie" value="${esc(r.copie)}" id="cp${r.id}" aria-label="Copie"></td>
+  <td class="fmtcol">${sel('formato', [['', '⬜ non stampare'], ['A3', '🟥 A3'], ['G', '🟧 Stopper grande'], ['P', '🟦 Stopper piccolo']], 'fm', 'fmt' + (r.formato ? ' set f-' + r.formato : ''))}</td>
+  <td class="c"><button class="small del" data-act="del" aria-label="Elimina riga" title="Elimina riga">✕</button></td>
+</tr>`;
+}
+function drawThumb(el, r) {
+  const cv = el.querySelector('canvas'); const c = cv.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+  if (!r.formato) { cv.height = 120; c.fillStyle = '#f2f2f2'; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#888'; c.font = '600 22px Arial'; c.textAlign = 'center'; c.fillText('Nessun formato', cv.width / 2, 68); return; }
+  let box;
+  if (r.formato === 'A3') box = { x: 0, y: 0, w: PAGE.A3.w, h: PAGE.A3.h };
+  else if (r.formato === 'G') box = { x: 55, y: 5, w: 500, h: 205 };
+  else box = { x: P_COLS[0] - 10, y: P_ROWS[0].d - 26, w: 225, h: P_ROWS[0].fino - P_ROWS[0].d + 34 };
+  const s = cv.width / box.w; cv.height = Math.round(box.h * s);
+  c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+  c.setTransform(s, 0, 0, s, -box.x * s, -box.y * s);
+  const p = new CanvasPainter(c);
+  if (r.formato === 'A3') drawA3(p, r, ctx()); else if (r.formato === 'G') drawG(p, r, 0, ctx()); else drawP(p, r, 0, ctx());
+}
+const ncod = s => String(s || '').trim().replace(/^0+(?=\d)/, '');
+function matches(r, q) {
+  if (!q) return true;
+  const qc = ncod(q), qu = q.toUpperCase();
+  if (/^\d+$/.test(q.trim())) return ncod(r.codice).includes(qc);
+  return String(r.desc || '').toUpperCase().includes(qu) || String(r.codice || '').includes(q.trim());
+}
+function render() {
+  const L = $('#list');
+  const q = ($('#q').value || '').trim();
+  let extra = '';
+  if (q && /^\d{3,}$/.test(q) && !state.rows.some(r => ncod(r.codice) === ncod(q))) {
+    extra = `<div class="found">Il codice <b>${esc(q)}</b> non è nell'elenco caricato.</div>`;
+  }
+  if (!state.rows.length) { L.innerHTML = extra + '<div class="empty">Nessun articolo. Carica un elenco al passo 1 oppure usa “+ Aggiungi riga”.</div>'; totals(); return; }
+  const HEAD = '<tr><th></th><th>#</th><th>Codice</th><th>Descrizione</th><th>Gramm.</th><th>Promo</th><th title="Solo Prendi/Spendi: quantità minima">Soglia</th><th title="Rimonta: usa il prezzo della griglia">Rim.</th><th>Sconto %</th><th>Prezzo</th><th>Barrato</th><th>Unità</th><th>Al Kg</th><th>Fino al</th><th>Intestazione</th><th>Volantino</th><th>Copie</th><th class="fmtcol">Formato</th><th></th></tr>';
+  const wrapT = rows => `<div class="sheetwrap"><table class="sheet"><thead>${HEAD}</thead><tbody>${rows}</tbody></table></div>`;
+  const daStampare = r => r.on && r.formato && !r.esempio;
+  $('#nTutte').textContent = state.rows.length; $('#nStampa').textContent = state.rows.filter(daStampare).length;
+  document.querySelectorAll('[data-vista]').forEach(b => b.classList.toggle('on', b.dataset.vista === state.vista));
+  let vis = state.rows.map((r, i) => [r, i]).filter(([r]) => matches(r, q));
+  let html;
+  if (state.vista === 'stampa') {
+    vis = vis.filter(([r]) => daStampare(r));
+    html = wrapT(['A3', 'G', 'P'].map(f => { const g = vis.filter(([r]) => r.formato === f); return g.length ? `<tr class="grp g-${f}"><td colspan="19">${{ A3: '🟥', G: '🟧', P: '🟦' }[f]} ${NOMI[f]} · ${g.length}</td></tr>` + g.map(([r, i]) => rowHtml(r, i + 1)).join('') : ''; }).join(''));
+    if (!vis.length) html = '<div class="empty">Nessun cartello da stampare: scegli un formato nelle righe (vista “Tutto l\'elenco”).</div>';
+  } else html = vis.length ? wrapT(vis.map(([r, i]) => rowHtml(r, i + 1)).join('')) : (extra ? '' : '<div class="empty">Nessuna riga corrisponde alla ricerca.</div>');
+  L.innerHTML = extra + html;
+  totals();
+}
+function totals() {
+  const on = state.rows.filter(r => r.on && !r.esempio);
+  const cnt = f => paginate(on.filter(r => r.formato === f), f);
+  const a = cnt('A3'), g = cnt('G'), p = cnt('P');
+  const nofmt = on.filter(r => !r.formato).length;
+  const nc = f => on.filter(r => r.formato === f).reduce((s, r) => s + (parseInt(r.copie, 10) || 1), 0);
+  $('#tot').innerHTML = `<span class="tc f-A3">🟥 A3 <b>${nc('A3')}</b></span> <span class="tc f-G">🟧 Grandi <b>${nc('G')}</b> · ${g.length} fogli</span> <span class="tc f-P">🟦 Piccoli <b>${nc('P')}</b> · ${p.length} fogli</span>` + (nofmt ? ` <span class="tc">⬜ ${nofmt} senza formato</span>` : '');
+  $('#bSend').disabled = !(a.length || g.length || p.length);
+  const n = nc('A3') + nc('G') + nc('P');
+  $('#moti').textContent = n ? `💪 ${n} cartelli pronti in un clic · a mano sarebbero circa ${n * 3} minuti (stima 3 min a cartello)` : '👉 Scegli il formato delle righe e premi INVIA';
+
+}
+function goStep2() { setTimeout(() => { const sec = $('#list').closest('section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }
+function rowOf(el) { const it = el.closest('tr[data-id]'); return it ? state.rows.find(r => r.id === Number(it.dataset.id)) : null; }
+$('#list').addEventListener('input', e => {
+  const k = e.target.dataset.k; const r = rowOf(e.target); if (!k || !r) return;
+  r.esempio = false;
+  if (k === 'on') r.on = e.target.checked;
+  else if (k === 'rimonta') { r.rimonta = e.target.checked; applyPrice(r); save(); render(); return; }
+  else if (k === 'formato') { r.formato = e.target.value; save(); render(); return; }
+  else if (k === 'intest') r.intest = e.target.value.trim() === '' ? null : e.target.value;
+  else r[k] = e.target.value;
+  if (k === 'prezzo' && r.vol && r.vol.stato === 'check') { r.vol.stato = 'man'; if (r.griglia) r.griglia.prezzo = r.prezzo; }
+  const tr = e.target.closest('tr'); tr.classList.toggle('off', !r.on); tr.classList.remove('esempio');
+  if (k === 'prezzo' || k === 'unita' || k === 'sconto' || k === 'promo') { const kv = kgValue(r); tr.querySelector('[data-k="kg"]').placeholder = kv && kv.calc ? kv.v : ''; tr.querySelector('[data-k="intest"]').placeholder = headerText(Object.assign({}, r, { intest: null })); }
+  if (k === 'prezzo') tr.querySelector('[data-k="prezzo"]').parentElement.classList.toggle('miss', !money(r.prezzo));
+  const fc = tr.querySelector('.face'); if (fc) fc.textContent = face(r);
+  save(); totals();
+});
+$('#list').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; const r = rowOf(b); if (!r) return;
+  if (b.dataset.act === 'del') { state.rows = state.rows.filter(x => x !== r); save(); render(); }
+  if (b.dataset.act === 'usa') { r.prezzo = b.dataset.p; r.vol.stato = 'man'; r.esempio = false; save(); render(); }
+});
+document.querySelectorAll('[data-all]').forEach(b => b.addEventListener('click', () => { state.rows.forEach(r => { if (!r.esempio) r.formato = b.dataset.all; }); save(); render(); }));
+$('#bAdd').addEventListener('click', () => { state.rows.push(newRow({ formato: 'A3' })); save(); render(); const all = document.querySelectorAll('tr[data-id]'); const last = all[all.length - 1]; if (last) { last.scrollIntoView({ block: 'center' }); last.querySelector('[data-k="desc"]').focus(); } });
+let undoRows = null, undoT = null;
+$('#bClear').addEventListener('click', () => {
+  if (!state.rows.length) return;
+  undoRows = state.rows; state.rows = []; save(); render();
+  const st = $('#sXls'); st.innerHTML = '🗑️ Elenco svuotato. <button class="small" id="bUndo">↩️ Annulla</button>';
+  $('#bUndo').onclick = () => { if (undoRows) { state.rows = undoRows; undoRows = null; save(); render(); st.textContent = '↩️ Elenco ripristinato.'; } };
+  clearTimeout(undoT); undoT = setTimeout(() => { undoRows = null; if ($('#bUndo')) st.textContent = ''; }, 10000);
+});
+$('#gFino').addEventListener('input', e => { state.fino = e.target.value; save(); render(); });
+
+/* ---------- file e trascinamento ---------- */
+function showFiles(inp, out, btn) { const fs = [...inp.files]; out.textContent = fs.map(f => f.name).join(' · '); btn.disabled = !fs.length && !(inp.id === 'fElenco' && $('#tElenco').value.trim()); }
+$('#fElenco').addEventListener('change', () => { showFiles($('#fElenco'), $('#lsElenco'), $('#bElenco')); if ($('#fElenco').files.length) readElenco(); });
+$('#bLoad2').addEventListener('click', () => $('#fElenco').click());
+$('#fVol').addEventListener('change', () => { showFiles($('#fVol'), $('#lsVol'), $('#bVol')); $('#bVolList').disabled = !$('#fVol').files.length; });
+$('#bVolList').addEventListener('click', readVolList);
+$('#tElenco').addEventListener('input', () => showFiles($('#fElenco'), $('#lsElenco'), $('#bElenco')));
+[['#dropElenco', '#fElenco', '#lsElenco', '#bElenco'], ['#dropVol', '#fVol', '#lsVol', '#bVol']].forEach(([d, i, o, b]) => {
+  const z = $(d);
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('over'); });
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('over'); try { $(i).files = e.dataTransfer.files; } catch (x) {} showFiles($(i), $(o), $(b)); if (i === '#fVol') $('#bVolList').disabled = !$(i).files.length; if (i === '#fElenco' && $(i).files.length) readElenco(); });
+});
+$('#bElenco').addEventListener('click', readElenco);
+$('#bVol').addEventListener('click', readVol);
+$('#bStop').addEventListener('click', () => stopCtl && stopCtl.abort());
+
+/* ---------- ricerca e anagrafica ---------- */
+let ANA = null, qT = null;
+$('#q').addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(render, 200); });
+/* ---------- Excel elenco (formato da scegliere) ---------- */
+const XL_FMT = { A3: 'A3', G: 'STOPPER GRANDE', P: 'STOPPER PICCOLO', '': 'NON STAMPARE' };
+const XL_COLS = [
+  ['CODICE', 'codice', 12], ['DESCRIZIONE', 'desc', 40], ['GRAMMATURA', 'gramm', 12], ['PROMO', 'promo', 12], ['SOGLIA', 'soglia', 14], ['FORMATO', 'formato', 18], ['COPIE', 'copie', 8],
+  ['PREZZO', 'prezzo', 10], ['PREZZO PRIMA', 'prima', 13], ['SCONTO %', 'sconto', 10], ['UNITA', 'unita', 10],
+  ['AL KG', 'kg', 10], ['FINO AL', 'fino', 12], ['INTESTAZIONE', 'intest', 26], ['RIMONTA', 'rimonta', 10], ['PREZZO GRIGLIA', 'pg', 14], ['PREZZO VOLANTINO', 'vp', 16], ['CONFRONTO VOLANTINO', 'vs', 22], ['NOTE LETTURA', 'dubbio', 30],
+];
+async function saveFile(name, blob) {
+  if (downloads) { await downloads.save({ filename: name, data: blob }); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+$('#bXlsOut').addEventListener('click', async () => {
+  const st = $('#sXls'); st.classList.remove('err');
+  const rows = state.rows.filter(r => !r.esempio && r.on && r.formato);
+  if (!rows.length) { st.classList.add('err'); st.textContent = 'Nessun cartello selezionato: scegli il formato delle righe da stampare.'; return; }
+  try {
+    st.textContent = 'Preparo l\'Excel…';
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const wb = new window.ExcelJS.Workbook(); const ws = wb.addWorksheet('ELENCO CARTELLI', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ws.columns = XL_COLS.map(([h, , w]) => ({ header: h, width: w }));
+    const vs = { ok: 'UGUALE ALLA GRIGLIA', diff: 'DIVERSO DALLA GRIGLIA', nf: 'NON TROVATO', check: 'DA CONTROLLARE', man: 'CONTROLLATO A MANO' };
+    rows.forEach(r => {
+      const kv = kgValue(r);
+      ws.addRow(XL_COLS.map(([, k]) => k === 'formato' ? XL_FMT[r.formato || ''] : k === 'kg' ? (r.kg || (kv && kv.calc ? kv.v : '')) : k === 'intest' ? headerText(r, state.tipo)
+        : k === 'fino' ? (r.fino || finoText({}, state.fino, true).replace('Fino al ', '')) : k === 'rimonta' ? (r.rimonta ? 'SI' : '') : k === 'pg' ? (r.griglia ? r.griglia.prezzo : r.prezzo) || '' : k === 'vp' ? (r.vol && r.vol.prezzo || '') : k === 'vs' ? (r.vol ? vs[r.vol.stato] || '' : '') : k === 'copie' ? (parseInt(r.copie, 10) || 1) : (r[k] == null ? '' : String(r[k]))));
+    });
+    const hr = ws.getRow(1); hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }; hr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3000F' } }; hr.height = 22;
+    const fc = XL_COLS.findIndex(c => c[1] === 'formato') + 1, vc = XL_COLS.findIndex(c => c[1] === 'vs') + 1, uc = XL_COLS.findIndex(c => c[1] === 'unita') + 1, cc = XL_COLS.findIndex(c => c[1] === 'codice') + 1;
+    for (let i = 2; i <= rows.length + 1; i++) {
+      const cell = ws.getCell(i, fc);
+      cell.dataValidation = { type: 'list', allowBlank: false, formulae: ['"A3,STOPPER GRANDE,STOPPER PICCOLO,NON STAMPARE"'], showErrorMessage: true, errorTitle: 'Formato', error: 'Scegli dalla lista' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }; cell.font = { bold: true };
+      ws.getCell(i, uc).dataValidation = { type: 'list', allowBlank: true, formulae: ['"all\'etto,al pz,al kg,al litro"'] };
+      ws.getCell(i, cc).numFmt = '@';
+      ws.getCell(i, XL_COLS.findIndex(c => c[1] === 'promo') + 1).dataValidation = { type: 'list', allowBlank: false, formulae: ['"OFFERTA,FIDELITY,PRENDI,WEEKEND"'] };
+      const v = ws.getCell(i, vc); if (v.value === 'DIVERSO DALLA GRIGLIA') v.font = { bold: true, color: { argb: 'FFC4000D' } }; else if (v.value === 'UGUALE ALLA GRIGLIA') v.font = { color: { argb: 'FF1D7A3E' } };
+      if (!money(rows[i - 2].prezzo)) ws.getCell(i, XL_COLS.findIndex(c => c[1] === 'prezzo') + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
+    }
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: rows.length + 1, column: XL_COLS.length } };
+    const buf = await wb.xlsx.writeBuffer();
+    const fp = dateParts(state.fino);
+    await saveFile(`ELENCO CARTELLI${fp ? ' fino al ' + fp.d + '-' + fp.m : ''}.xlsx`, new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const tolte = state.rows.length - rows.length;
+    undoRows = tolte ? state.rows : null; state.rows = rows; state.vista = 'tutte'; save(); render();
+    st.innerHTML = `💾 Salvato: ${rows.length} cartelli da stampare` + (tolte ? `, tolte ${tolte} righe non selezionate. <button class="small" id="bUndo">↩️ Annulla</button>` : '.');
+    const u = $('#bUndo'); if (u) u.onclick = () => { if (undoRows) { state.rows = undoRows; undoRows = null; save(); render(); st.textContent = '↩️ Elenco completo ripristinato.'; } };
+  } catch (e) { if (e && e.code === 'cancelled') { st.textContent = ''; return; } st.classList.add('err'); st.textContent = 'Excel non creato: ' + (e.code || e.message || e); }
+});
+// Tabulato promo del gestionale (codice_interno, descrizione_articolo, pv_attuale, pv_promozionale, sconto, tipo_promozione, volantino)
+function importTabulato(data) {
+  const hi = data.findIndex(r => r.some(c => /descrizione/i.test(c)) && r.some(c => /pv_promo|prezzo.?promo/i.test(c)));
+  if (hi < 0) return null;
+  const h = data[hi].map(x => String(x).trim().toLowerCase());
+  const col = re => h.findIndex(c => re.test(c));
+  const cC = col(/^codice_interno$|^codice$/), cD = col(/descrizione/), cU = col(/unita_misura|^um$/), cT = col(/tipo_promo|tipologia/),
+    cA = col(/pv_attuale|prezzo_attuale/), cP = col(/pv_promo|prezzo.?promo/), cS = col(/^sconto/), cV = col(/^volantino$/);
+  const U = { PZ: 'al pz', KG: 'al kg', HG: "all'etto", LT: 'al litro', L: 'al litro' };
+  return data.slice(hi + 1).filter(r => String(r[cD] || '').trim()).map(r => {
+    const g = i => i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim();
+    const pro = money(g(cP)), att = money(g(cA)), sc = num(g(cS));
+    return {
+      codice: g(cC), desc: g(cD), prezzo: pro || g(cP),
+      prima: att && pro && num(att) > num(pro) ? att : '',
+      sconto: sc > 0 ? pct(g(cS)) : '', promo: /fidel|payback/i.test(g(cT)) ? 'FIDELITY' : 'OFFERTA',
+      unita: U[g(cU).toUpperCase()] || '', inVol: /^[SN]$/i.test(g(cV)) ? g(cV).toUpperCase() : '',
+    };
+  });
+}
+
+// Excel salvato dall'app (colonne DESCRIZIONE + FORMATO): si ricarica dal passo 1 come un elenco qualsiasi
+function importAppRows(data) {
+  const h = (data[0] || []).map(x => String(x).trim().toUpperCase());
+  const col = name => h.indexOf(name);
+  if (col('DESCRIZIONE') < 0 || col('FORMATO') < 0) return null;
+  const back = { 'A3': 'A3', 'STOPPER GRANDE': 'G', 'STOPPER GRANDI': 'G', 'STOPPER PICCOLO': 'P', 'STOPPER PICCOLI': 'P' };
+  const old = state.rows.filter(r => !r.esempio);
+  const out = [];
+  data.slice(1).forEach(row => {
+    const g = k => { const i = col(k); return i < 0 ? '' : String(row[i] == null ? '' : row[i]).trim(); };
+    if (!g('DESCRIZIONE') && !g('CODICE')) return;
+    const prev = old.find(r => r.codice && r.codice === g('CODICE') && r.desc === g('DESCRIZIONE')) || old.find(r => r.desc === g('DESCRIZIONE'));
+    const u = g('UNITA').toLowerCase();
+    const intest = g('INTESTAZIONE');
+    const r = newRow({
+      codice: g('CODICE'), desc: g('DESCRIZIONE'), gramm: g('GRAMMATURA'), promo: /fidel|payback/i.test(g('PROMO')) ? 'FIDELITY' : /prendi/i.test(g('PROMO')) ? 'PRENDI' : /weekend/i.test(g('PROMO')) ? 'WEEKEND' : 'OFFERTA', soglia: g('SOGLIA'), formato: back[g('FORMATO').toUpperCase()] || '', copie: parseInt(g('COPIE'), 10) || 1,
+      prezzo: money(g('PREZZO')) || g('PREZZO'), prima: money(g('PREZZO PRIMA')) || '', sconto: pct(g('SCONTO %')),
+      unita: ["all'etto", 'al pz', 'al kg', 'al litro'].includes(u) ? u : unitFrom(u), dubbio: g('NOTE LETTURA'), rimonta: /^s/i.test(g('RIMONTA')),
+      vol: prev ? prev.vol : null,
+    });
+    const kv = kgValue(Object.assign({}, r, { kg: '' }));
+    r.kg = money(g('AL KG')) && !(kv && kv.calc && kv.v === money(g('AL KG'))) ? money(g('AL KG')) : '';
+    const fglob = finoText({}, state.fino, true).replace('Fino al ', '');
+    r.fino = g('FINO AL') && g('FINO AL') !== fglob ? g('FINO AL') : '';
+    r.intest = intest && intest !== headerText(Object.assign({}, r, { intest: null })) ? intest : null;
+    if (prev && prev.griglia) r.griglia = Object.assign({}, prev.griglia);
+    else if (money(g('PREZZO GRIGLIA')) && money(g('PREZZO GRIGLIA')) !== money(r.prezzo)) r.griglia = { prezzo: money(g('PREZZO GRIGLIA')), prima: r.prima, sconto: r.sconto, promo: r.promo };
+    if (r.vol && r.vol.stato !== 'nf') volCheck(r);
+    out.push(r);
+  });
+  return out;
+}
+
+/* ---------- PDF e anteprima ---------- */
+const NOMI = { A3: 'CARTELLI A3', G: 'STOPPER GRANDI', P: 'STOPPER PICCOLI' };
+function printable(f) { return state.rows.filter(r => r.on && !r.esempio && r.formato === f); }
+let sendArmed = false;
+function makeFiles() {
+  const fp = dateParts(state.fino); const suf = fp ? ' fino al ' + fp.d + '-' + fp.m : '';
+  const out = [];
+  for (const f of ['A3', 'G', 'P']) {
+    const items = printable(f); if (!items.length) continue;
+    const { doc, pages } = buildPdf(window.jspdf.jsPDF, f, items, ctx());
+    out.push({ f, pages, file: new File([doc.output('blob')], `${NOMI[f]}${suf}.pdf`, { type: 'application/pdf' }) });
+  }
+  return out;
+}
+const EVVIVA = ['🎉 Fatto! Pausa caffè meritata ☕', '🚀 Cartelli pronti in un lampo!', '👏 Ottimo lavoro: prezzi identici al volantino.', '🌟 Un altro volantino sistemato senza fatica!', '😎 Lavoro snello, negozio in ordine.'];
+const evviva = () => EVVIVA[Math.floor(Math.random() * EVVIVA.length)];
+const CARTA = { A3: 'carta A3 orizzontale', G: 'carta A4 verticale', P: 'carta A4 verticale' };
+function openSend() {
+  const all = ['A3', 'G', 'P'].flatMap(f => printable(f));
+  const miss = all.filter(r => !money(r.prezzo) || (r.vol && r.vol.stato === 'check'));
+  $('#sendWarn').textContent = miss.length ? `⚠️ Attenzione: ${miss.length} cartelli senza prezzo o da controllare (${miss.slice(0, 3).map(r => r.desc).join(', ')}${miss.length > 3 ? '…' : ''}).` : '';
+  $('#sendChoice').hidden = false; $('#printList').hidden = true; $('#sendMsg').textContent = '';
+  $('#sendDlg').hidden = false;
+}
+function closeSend() { $('#sendDlg').hidden = true; }
+$('#bSend').addEventListener('click', openSend);
+$('#sendClose').addEventListener('click', closeSend);
+$('#sendDlg').addEventListener('click', e => { if (e.target.id === 'sendDlg') closeSend(); });
+$('#bChoosePrint').addEventListener('click', () => {
+  if (downloads) { $('#sendMsg').textContent = 'Da claude.ai la finestra di stampa non si può aprire. Usa “Invia come PDF” e stampa dal file scaricato, oppure apri APP CARTELLI.html sul PC per stampare direttamente.'; return; }
+  const files = makeFiles();
+  $('#printList').innerHTML = files.map(x => `<button class="primary" data-print="${x.f}">Stampa ${NOMI[x.f]} · ${x.pages} ${x.pages === 1 ? 'foglio' : 'fogli'} · ${CARTA[x.f]}</button>`).join('') +
+    '<p class="legend">Si apre la finestra di stampa: scegli la stampante e controlla il formato carta. Un formato alla volta, perché A3 e A4 vanno su carta diversa.</p>';
+  $('#sendChoice').hidden = true; $('#printList').hidden = false;
+  $('#printList').querySelectorAll('[data-print]').forEach(b => b.addEventListener('click', () => {
+    const x = files.find(y => y.f === b.dataset.print); const url = URL.createObjectURL(x.file);
+    if (matchMedia('(pointer:coarse)').matches) { window.open(url, '_blank'); return; }
+    let fr = document.getElementById('printFrame'); if (fr) fr.remove();
+    fr = document.createElement('iframe'); fr.id = 'printFrame'; fr.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { window.open(url, '_blank'); } };
+    fr.src = url; document.body.appendChild(fr);
+    $('#sendMsg').innerHTML = `${evviva()} Finestra di stampa per ${NOMI[x.f]}. Se non compare, <a href="${url}" target="_blank" rel="noopener">apri il PDF</a> e stampa da lì.`;
+  }));
+});
+$('#bChoosePdf').addEventListener('click', async () => {
+  const msg = $('#sendMsg'); msg.textContent = 'Preparo i PDF…';
+  try {
+    const files = makeFiles().map(x => x.file);
+    let shared = false;
+    if (!downloads && navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files, title: 'Cartelli prezzo' }); shared = true; } catch (e) { if (e && e.name === 'AbortError') shared = true; }
+    }
+    if (!shared) for (const f of files) { try { await saveFile(f.name, f); } catch (e) { if (!e || (e.code !== 'cancelled' && e.code !== 'declined')) throw e; } }
+    msg.textContent = `🎉 Creati ${files.length} PDF: ${files.map(f => f.name).join(' · ')}` + (shared ? '' : '. Li trovi nella cartella Download.') + ' ' + evviva();
+  } catch (e) { msg.textContent = 'PDF non creati: ' + (e.code || e.message || e); }
+});
+$('#bPrev').addEventListener('click', () => {
+  const box = $('#pages'); box.innerHTML = ''; let n = 0;
+  for (const f of ['A3', 'G', 'P']) {
+    const pages = paginate(printable(f), f);
+    pages.forEach(pg => {
+      if (n >= 40) return; n++;
+      const sz = f === 'A3' ? PAGE.A3 : PAGE.A4; const cv = document.createElement('canvas');
+      const wpx = f === 'A3' ? 620 : 300; const s = wpx * 2 / sz.w; cv.width = wpx * 2; cv.height = Math.round(sz.h * s); cv.style.width = wpx + 'px';
+      const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.setTransform(s, 0, 0, s, 0, 0);
+      const cp = new CanvasPainter(c); drawPage(cp, f, pg, Object.assign(ctx(), { u: uniform(cp, f, printable(f)) })); box.appendChild(cv);
+    });
+  }
+  $('#sPrev').textContent = n ? `${n} fogli${n >= 40 ? ' (mostro i primi 40)' : ''}. Il PDF scaricato è identico.` : 'Nessuna riga con formato scelto.';
+});
+
+/* ---------- faccine sui messaggi ---------- */
+const BAD = /non riesco|non riuscit|non creat|errore|non trovo|non è|nessun|non supportato|non autorizzat|troppe|non accettat|non leggibile|attenzione|prima carica|è vuoto|mancan/i;
+const GOOD = /letti|finito|salvato|creati|ricaricato|pronto|finestra di stampa/i;
+function moodStatus(el) {
+  new MutationObserver(() => {
+    const t = el.textContent.replace(/^(😊|😢)\s*/, '');
+    const bad = el.classList.contains('err') || BAD.test(t), good = !bad && GOOD.test(t);
+    const want = t ? (bad ? '😢 ' : good ? '😊 ' : '') + t : '';
+    if (el.textContent !== want) { if (!el.children.length) el.textContent = want; else if (bad || good) el.insertAdjacentText('afterbegin', want.slice(0, 3)); }
+  }).observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+document.querySelectorAll('.status').forEach(moodStatus);
+
+/* ---------- avvio ---------- */
+const dl = document.createElement('datalist'); dl.id = 'intList';
+dl.innerHTML = ['OFFERTA', 'OFFERTA – 20%', 'OFFERTA – 25%', 'OFFERTA – 30%', 'OFFERTA – 50%', 'SPESAMICA PAYBACK - 20%', 'PROMO WEEKEND'].map(v => `<option value="${v}">`).join('');
+document.body.appendChild(dl);
+if (!load()) { state.rows = ESEMPI.map(e => newRow(Object.assign({ esempio: true }, e))); const d = new Date(); d.setDate(d.getDate() + 5); state.fino = d.toISOString().slice(0, 10); }
+$('#gFino').value = state.fino || '';
+render();
+initClaude();
+</script>
+
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
