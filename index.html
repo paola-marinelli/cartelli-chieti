@@ -170,7 +170,13 @@ section.step:nth-of-type(3) h2 .n{background:var(--violet)}
 .f-A3{--fc:var(--red);--fs:var(--red-soft)}
 .f-G{--fc:var(--orange);--fs:var(--orange-soft)}
 .f-P{--fc:var(--blue);--fs:var(--blue-soft)}
-button.f-A3,button.f-G,button.f-P{background:var(--fs);border-color:var(--fc);color:var(--ink)}
+.f-A4O{--fc:var(--ok);--fs:var(--ok-soft)}
+.f-A4V{--fc:var(--violet);--fs:var(--violet-soft)}
+.sheet tr.row-A4O td:first-child{box-shadow:inset 4px 0 0 var(--ok)}
+.sheet tr.row-A4V td:first-child{box-shadow:inset 4px 0 0 var(--violet)}
+.sheet tr.grp.g-A4O td{color:var(--ok)}
+.sheet tr.grp.g-A4V td{color:var(--violet)}
+button.f-A3,button.f-A4O,button.f-A4V,button.f-G,button.f-P{background:var(--fs);border-color:var(--fc);color:var(--ink)}
 .sheet select.fmt.set{background:var(--fc);border-color:var(--fc);color:#fff}
 .sheet tr.row-A3 td:first-child{box-shadow:inset 4px 0 0 var(--red)}
 .sheet tr.row-G td:first-child{box-shadow:inset 4px 0 0 var(--orange)}
@@ -251,6 +257,8 @@ button.usa{padding:2px 7px;font-size:11px;border-color:var(--bad);color:var(--ba
     <div class="bulk">
       <span>Tutte le righe:</span>
       <button class="small f-A3" data-all="A3">🟥 A3</button>
+      <button class="small f-A4O" data-all="A4O">🟩 A4 orizzontale</button>
+      <button class="small f-A4V" data-all="A4V">🟪 A4 verticale</button>
       <button class="small f-G" data-all="G">🟧 Stopper grande</button>
       <button class="small f-P" data-all="P">🟦 Stopper piccolo</button>
       <button class="small" data-all="">⬜ Nessun formato</button>
@@ -391,11 +399,11 @@ function bigPrice(p, prezzo, o) {
   const [i, d] = m.split(',');
   const dec = ',' + d;
   let k = 1;
-  const tot = p.w(i, o.si, true) + p.w(dec, o.sd, true) + o.gap + p.w('€', o.se, true);
+  const tot = p.w(i, o.si, true) + p.w(dec, o.sd, true) + (o.se ? o.gap + p.w('€', o.se, true) : 0);
   if (o.right - tot < o.minLeft) k = (o.right - o.minLeft) / tot;
-  const xe = o.right - p.w('€', o.se * k, true);
-  p.text('€', xe, o.base, { size: o.se * k, bold: true });
-  const xd = xe - o.gap * k - p.w(dec, o.sd * k, true);
+  const xe = o.se ? o.right - p.w('€', o.se * k, true) : o.right;
+  if (o.se) p.text('€', xe, o.base, { size: o.se * k, bold: true });
+  const xd = xe - (o.se ? o.gap * k : 0) - p.w(dec, o.sd * k, true);
   p.text(dec, xd, o.base, { size: o.sd * k, bold: true });
   p.text(i, xd - p.w(i, o.si * k, true), o.base, { size: o.si * k, bold: true });
 }
@@ -416,9 +424,11 @@ function headPartsP(p, h, hs) {
 }
 function fitHeadP(p, r) { const h = headerText(r); for (let hs = 20; hs > 10; hs--) { const l = headPartsP(p, h, hs); if (l.length <= 2 && fitsAll(p, l, [112], hs, true)) return hs; } return 10; }
 // stessa grandezza di scritta per tutti i cartelli dello stesso formato: si rimpicciolisce solo chi non ci sta
+// A4O/A4V: un cartello per foglio, la descrizione resta grande come nel modello (minimo uniforme alto)
 function uniform(p, fmt, items) {
-  const F = { A3: [fitDescA3, fitHeadA3, 64], G: [fitDescG, fitHeadG, 20], P: [fitDescP, fitHeadP, 16] }[fmt];
+  const F = { A3: [fitDescA3, fitHeadA3, 64], A4O: [fitDescA4O, fitHeadA4O, 80], A4V: [fitDescA4V, () => 99, 99], G: [fitDescG, fitHeadG, 20], P: [fitDescP, fitHeadP, 16] }[fmt];
   if (!F || !items.length) return null;
+  if (fmt === 'A4O') p = new ScaledPainter(p, K_A4O);
   const desc = Math.max(F[2], Math.min(...items.map(r => F[0](p, r))));
   const head = {};
   items.forEach(r => { const k = r.promo || 'OFFERTA'; const v = F[1](p, r); head[k] = Math.min(head[k] || 999, v); });
@@ -495,23 +505,23 @@ function drawG(p, r, slot, ctx) {
 }
 
 // bollino fidelity come nel volantino: fascia azzurra "SPESAMICA PAYBACK" + blocco rosso "-20%" (colori presi dal PDF del volantino)
-function paybackBadge(p, x, y, r) {
-  const W = 122, HB = 15, HR = 41; // stesse misure del riquadro OFFERTA (122 x 56)
+function paybackBadge(p, x, y, r, W = 122, H = 56) {
+  const k = H / 56, HB = 15 * k, HR = H - HB; // di serie: stesse misure del riquadro OFFERTA (122 x 56)
   p.rect(x, y, W, HB, PB_BLUE);
   p.rect(x, y + HB, W, HR, PB_RED);
-  let ts = 11; while (ts > 6 && p.w('SPESAMICA ', ts, false) + p.w('PAYBACK', ts, true) > W - 8) ts -= 0.5;
+  let ts = 11 * k; while (ts > 6 && p.w('SPESAMICA ', ts, false) + p.w('PAYBACK', ts, true) > W - 8) ts -= 0.5;
   const tw = p.w('SPESAMICA ', ts, false) + p.w('PAYBACK', ts, true), tx = x + (W - tw) / 2, tb = y + HB / 2 + CAP * ts / 2;
   p.text('SPESAMICA ', tx, tb, { size: ts, color: '#FFFFFF' });
   p.text('PAYBACK', tx + p.w('SPESAMICA ', ts, false), tb, { size: ts, bold: true, color: '#FFFFFF' });
   const sc = pct(r.sconto);
   if (sc) {
     const big = '-' + sc;
-    let s = 34; while (s > 14 && p.w(big, s, true) + p.w('%', s * 0.42, true) > W - 8) s -= 1;
+    let s = 34 * k; while (s > 14 && p.w(big, s, true) + p.w('%', s * 0.42, true) > W - 8) s -= 1;
     const w1 = p.w(big, s, true), w2 = p.w('%', s * 0.42, true), bx = x + (W - w1 - w2) / 2, bb = y + HB + HR / 2 + CAP * s / 2;
     p.text(big, bx, bb, { size: s, bold: true, color: '#FFFFFF' });
     p.text('%', bx + w1 + 1, bb - CAP * s + CAP * s * 0.42, { size: s * 0.42, bold: true, color: '#FFFFFF' });
   } else {
-    const hs = fitSize(p, 'OFFERTA', W - 8, 20, 10, true);
+    const hs = fitSize(p, 'OFFERTA', W - 8, 20 * k, 10, true);
     p.text('OFFERTA', x + W / 2, y + HB + HR / 2 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
   }
 }
@@ -571,9 +581,77 @@ function drawP(p, r, slot, ctx) {
   if (us) p.text(us, x0 + P_W, R.fino, { size: 12, align: 'right' });
 }
 
+// ---------- A4 ORIZZONTALE (modello "A4 Offerta ORIZZONTALE"): stesso disegno 1190x842 dell'A3, ridotto su A4 ----------
+PAGE.A4O = { w: 841.89, h: 595.28 };
+const K_A4O = 841.89 / 1190.75;
+class ScaledPainter {
+  constructor(p, k) { this.p = p; this.k = k; }
+  w(s, size, b) { return this.p.w(s, size * this.k, b) / this.k; }
+  text(s, x, y, o) { this.p.text(s, x * this.k, y * this.k, Object.assign({}, o, { size: o.size * this.k })); }
+  rect(x, y, w, h, c, r) { this.p.rect(x * this.k, y * this.k, w * this.k, h * this.k, c, r ? r * this.k : r); }
+  line(a, b, c, d, lw) { this.p.line(a * this.k, b * this.k, c * this.k, d * this.k, lw * this.k); }
+  ellipse(cx, cy, rx, ry, c) { this.p.ellipse(cx * this.k, cy * this.k, rx * this.k, ry * this.k, c); }
+}
+const offertaCase = h => h.replace(/^OFFERTA\b/, 'Offerta');
+function fitDescA4O(p, r) { const d = descFull(r); for (const s of [80, 72, 64, 58, 52]) if (wrap(p, d, [1090], s, true).length <= 2) return s; return 52; }
+function fitHeadA4O(p, r) { return fitSize(p, offertaCase(headerText(r)), 1130, 199, 40, true); }
+function drawA4O(p0, r, ctx) {
+  const p = new ScaledPainter(p0, K_A4O), W = 1190.75;
+  p.rect(0, 0, W, 172, RED);
+  const h = offertaCase(headerText(r));
+  const hs = uSize(ctx, r, 'head', fitHeadA4O(p, r));
+  p.text(h, W / 2, 86 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
+  const size = uSize(ctx, r, 'desc', fitDescA4O(p, r));
+  const lines = wrap(p, descFull(r), [1090], size, true), step = size * 1.15;
+  lines.forEach((l, n) => p.text(l, 69, 287 + n * step, { size, bold: true }));
+  let last = 287 + (lines.length - 1) * step;
+  const u = unitLong(r.unita).replace('al kg', 'al Kg');
+  if (u) { last += step; p.text(u, 69, last, { size, bold: true }); }
+  const sg = r.promo === 'PRENDI' ? sogliaText(r) : '';
+  if (sg) { last += 60; p.text(sg, 69, last, { size: fitSize(p, sg, 470, 50, 20, true), bold: true, color: PB_RED }); }
+  bigPrice(p, r.prezzo, { right: 1097, base: 700, si: 390, sd: 200, se: 121, gap: 8, minLeft: 300 });
+  const f = finoText(r, ctx.fino, true);
+  if (f) p.text(f, 86, 781, { size: 24, bold: true });
+}
+
+// ---------- A4 VERTICALE (modello "a4 offerta"): descrizione centrata, riquadro OFFERTA, prezzo senza €, "Al kg" ----------
+function fitDescA4V(p, r) { const d = descFull(r); for (const s of [75, 70, 64, 58, 52, 46, 40]) { const l = wrap(p, d, [560], s, true); if (l.length <= 3 && fitsAll(p, l, [560], s, true)) return s; } return 40; }
+const UNIT_A4V = { "all'etto": 'All’etto', 'al pz': 'Al pz', 'al kg': 'Al kg', 'al litro': 'Al litro' };
+function drawA4V(p, r, ctx) {
+  const W = 595.28;
+  const size = uSize(ctx, r, 'desc', fitDescA4V(p, r));
+  const lines = wrap(p, descFull(r), [560], size, true), step = size * 1.2;
+  const hText = (lines.length - 1) * step + CAP * size;
+  const first = 22 + (262 - hText) / 2 + CAP * size; // descrizione centrata nello spazio sopra il riquadro
+  lines.forEach((l, n) => p.text(l, W / 2, first + n * step, { size, bold: true, align: 'center' }));
+  const bx = 43, by = 300, bw = 261, bh = 142;
+  const custom = !(r.intest == null || String(r.intest).trim() === '');
+  if (!custom && r.promo === 'PRENDI') prendiLogo(p, bx, by, bw, bh);
+  else if (!custom && r.promo === 'FIDELITY') paybackBadge(p, bx, by, r, bw, bh);
+  else {
+    p.rect(bx, by, bw, bh, RED, 18);
+    const hm = headerText(r).match(/^(.*?)\s*[–-]\s*(\d+(?:[.,]\d+)?\s*%)\s*$/); const hl = hm ? [hm[1], '-' + hm[2].replace(/\s/g, '')] : [headerText(r)];
+    let hs = 42; while (hs > 14 && !hl.every(l => p.w(l, hs, true) <= bw - 24)) hs -= 1;
+    const tot = (hl.length - 1) * hs * 1.15;
+    hl.forEach((l, n) => p.text(l, bx + bw / 2, by + bh / 2 - tot / 2 + CAP * hs / 2 + n * hs * 1.15, { size: hs, bold: true, color: '#FFFFFF', align: 'center' }));
+  }
+  const sg = r.promo === 'PRENDI' ? sogliaText(r) : '';
+  if (sg) p.text(sg, bx, by + bh + 26, { size: fitSize(p, sg, 330, 24, 10, true), bold: true, color: PB_RED });
+  if (r.propria) {
+    p.ellipse(467.5, 454.5, 79.5, 39.5, RED);
+    p.text('PRODUZIONE', 467.5, 450, { size: 13, bold: true, color: '#FFFFFF', align: 'center' });
+    p.text('PROPRIA', 467.5, 468, { size: 16, bold: true, color: '#FFFFFF', align: 'center' });
+  }
+  bigPrice(p, r.prezzo, { right: 535, base: 690, si: 250, sd: 145, se: 0, gap: 0, minLeft: 20 });
+  const u = UNIT_A4V[r.unita];
+  if (u) p.text(u, 540, 746, { size: 50, bold: true, align: 'right' });
+  const f = finoText(r, ctx.fino, true);
+  if (f) p.text(f, 7, 826, { size: 20, bold: true });
+}
+
 // pagine: A3 = 1 cartello per foglio; G = 4 per foglio A4; P = 6 per foglio A4
 function paginate(items, fmt) {
-  const per = fmt === 'A3' ? 1 : fmt === 'G' ? 4 : 6;
+  const per = fmt === 'G' ? 4 : fmt === 'P' ? 6 : 1;
   const flat = [];
   items.forEach(r => { const c = Math.max(1, Math.min(99, parseInt(r.copie, 10) || 1)); for (let i = 0; i < c; i++) flat.push(r); });
   const pages = [];
@@ -581,7 +659,7 @@ function paginate(items, fmt) {
   return pages;
 }
 function drawPage(p, fmt, page, ctx) {
-  page.forEach((r, s) => { if (fmt === 'A3') drawA3(p, r, ctx); else if (fmt === 'G') drawG(p, r, s, ctx); else drawP(p, r, s, ctx); });
+  page.forEach((r, s) => { if (fmt === 'A3') drawA3(p, r, ctx); else if (fmt === 'A4O') drawA4O(p, r, ctx); else if (fmt === 'A4V') drawA4V(p, r, ctx); else if (fmt === 'G') drawG(p, r, s, ctx); else drawP(p, r, s, ctx); });
 }
 
 class PdfPainter {
@@ -591,10 +669,11 @@ class PdfPainter {
   text(s, x, y, o) { this.font(o.size, o.bold); this.d.setTextColor(o.color || '#000000'); this.d.text(s, x, y, { align: o.align || 'left', baseline: 'alphabetic' }); }
   rect(x, y, w, h, col, r) { this.d.setFillColor(col); if (r) this.d.roundedRect(x, y, w, h, r, r, 'F'); else this.d.rect(x, y, w, h, 'F'); }
   line(x1, y1, x2, y2, lw) { this.d.setDrawColor('#000000'); this.d.setLineWidth(lw); this.d.line(x1, y1, x2, y2); }
+  ellipse(cx, cy, rx, ry, col) { this.d.setFillColor(col); this.d.ellipse(cx, cy, rx, ry, 'F'); }
 }
 function buildPdf(jsPDF, fmt, items, ctx) {
   const pages = paginate(items, fmt);
-  const doc = new jsPDF(fmt === 'A3' ? { orientation: 'landscape', unit: 'pt', format: 'a3' } : { orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const doc = new jsPDF(fmt === 'A3' ? { orientation: 'landscape', unit: 'pt', format: 'a3' } : fmt === 'A4O' ? { orientation: 'landscape', unit: 'pt', format: 'a4' } : { orientation: 'portrait', unit: 'pt', format: 'a4' });
   const p = new PdfPainter(doc);
   const c2 = Object.assign({}, ctx, { u: uniform(p, fmt, items) });
   pages.forEach((pg, i) => { if (i) doc.addPage(); drawPage(p, fmt, pg, c2); });
@@ -614,6 +693,7 @@ class CanvasPainter {
     c.fill();
   }
   line(x1, y1, x2, y2, lw) { const c = this.c; c.strokeStyle = '#000'; c.lineWidth = lw; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+  ellipse(cx, cy, rx, ry, col) { const c = this.c; c.fillStyle = col; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill(); }
 }
 
 /* ---------- stato ---------- */
@@ -625,7 +705,7 @@ const ESEMPI = [
 ];
 let uid = 1;
 function newRow(o) {
-  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
+  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', propria: false, rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
 }
 let state = { fino: '', tipo: 'OFFERTA', vista: 'tutte', rows: [] };
 function save() { try { localStorage.setItem('cartelli-chieti', JSON.stringify(state)); } catch (e) {} }
@@ -1078,7 +1158,9 @@ async function readVolList() {
 }
 
 /* ---------- interfaccia elenco ---------- */
-const FMT = [['A3', 'A3'], ['G', 'Stopper grande'], ['P', 'Stopper piccolo'], ['', 'Nessuno']];
+const FMT = [['A3', 'A3'], ['A4O', 'A4 orizzontale'], ['A4V', 'A4 verticale'], ['G', 'Stopper grande'], ['P', 'Stopper piccolo'], ['', 'Nessuno']];
+const FORMATI = ['A3', 'A4O', 'A4V', 'G', 'P'];
+const FMT_ICO = { A3: '🟥', A4O: '🟩', A4V: '🟪', G: '🟧', P: '🟦' };
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 const PROMO = [['OFFERTA', '🔥 Offerta'], ['FIDELITY', '💳 Fidelity'], ['PRENDI', '➕ Prendi/Spendi'], ['WEEKEND', '🎉 Weekend']];
 const UNITA = [['', '—'], ["all'etto", "all'etto"], ['al pz', 'al pz'], ['al kg', 'al kg'], ['al litro', 'al litro']];
@@ -1123,8 +1205,9 @@ function rowHtml(r, n) {
   <td>${t('kg', 'kg', 'w-s num', kv && kv.calc ? kv.v : '')}</td>
   <td>${t('fino', 'fi', 'w-s', finoText({}, state.fino, true).replace('Fino al ', '') || 'gg/mm')}</td>
   <td><input type="text" data-k="intest" id="in${r.id}" class="w-int" value="${esc(r.intest == null ? '' : r.intest)}" placeholder="${esc(headerText(Object.assign({}, r, { intest: null })))}" list="intList"></td>
+  <td class="c"><input type="checkbox" data-k="propria" ${r.propria ? 'checked' : ''} aria-label="Produzione propria" title="Ovale PRODUZIONE PROPRIA (formato A4 verticale)" id="pp${r.id}"></td>
   <td>${volCell(r)}</td>
-  <td class="fmtcol"><div class="fc">${sel('formato', [['', '⬜ non stampare'], ['A3', '🟥 A3'], ['G', '🟧 Stopper grande'], ['P', '🟦 Stopper piccolo']], 'fm', 'fmt' + (r.formato ? ' set f-' + r.formato : ''))}<div class="cps" title="Quante copie stampare"><button class="small" data-act="cp-" aria-label="Una copia in meno">−</button><input type="number" min="1" max="99" class="num w-cp" data-k="copie" value="${esc(r.copie)}" id="cp${r.id}" aria-label="Copie"><button class="small" data-act="cp+" aria-label="Una copia in più">+</button></div></div></td>
+  <td class="fmtcol"><div class="fc">${sel('formato', [['', '⬜ non stampare'], ['A3', '🟥 A3'], ['A4O', '🟩 A4 orizzontale'], ['A4V', '🟪 A4 verticale'], ['G', '🟧 Stopper grande'], ['P', '🟦 Stopper piccolo']], 'fm', 'fmt' + (r.formato ? ' set f-' + r.formato : ''))}<div class="cps" title="Quante copie stampare"><button class="small" data-act="cp-" aria-label="Una copia in meno">−</button><input type="number" min="1" max="99" class="num w-cp" data-k="copie" value="${esc(r.copie)}" id="cp${r.id}" aria-label="Copie"><button class="small" data-act="cp+" aria-label="Una copia in più">+</button></div></div></td>
   <td class="c"><button class="small del" data-act="del" aria-label="Elimina riga" title="Elimina riga">✕</button></td>
 </tr>`;
 }
@@ -1134,13 +1217,15 @@ function drawThumb(el, r) {
   if (!r.formato) { cv.height = 120; c.fillStyle = '#f2f2f2'; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#888'; c.font = '600 22px Arial'; c.textAlign = 'center'; c.fillText('Nessun formato', cv.width / 2, 68); return; }
   let box;
   if (r.formato === 'A3') box = { x: 0, y: 0, w: PAGE.A3.w, h: PAGE.A3.h };
+  else if (r.formato === 'A4O') box = { x: 0, y: 0, w: PAGE.A4O.w, h: PAGE.A4O.h };
+  else if (r.formato === 'A4V') box = { x: 0, y: 0, w: PAGE.A4.w, h: PAGE.A4.h };
   else if (r.formato === 'G') box = { x: 55, y: 5, w: 500, h: 205 };
   else box = { x: P_CELL.left, y: P_CELL.top, w: P_CELL.w, h: P_CELL.h };
   const s = cv.width / box.w; cv.height = Math.round(box.h * s);
   c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
   c.setTransform(s, 0, 0, s, -box.x * s, -box.y * s);
   const p = new CanvasPainter(c);
-  if (r.formato === 'A3') drawA3(p, r, ctx()); else if (r.formato === 'G') drawG(p, r, 0, ctx()); else drawP(p, r, 0, ctx());
+  if (r.formato === 'A3') drawA3(p, r, ctx()); else if (r.formato === 'A4O') drawA4O(p, r, ctx()); else if (r.formato === 'A4V') drawA4V(p, r, ctx()); else if (r.formato === 'G') drawG(p, r, 0, ctx()); else drawP(p, r, 0, ctx());
 }
 const ncod = s => String(s || '').trim().replace(/^0+(?=\d)/, '');
 function matches(r, q) {
@@ -1157,7 +1242,7 @@ function render() {
     extra = `<div class="found">Il codice <b>${esc(q)}</b> non è nell'elenco caricato.</div>`;
   }
   if (!state.rows.length) { L.innerHTML = extra + '<div class="empty">Nessun articolo. Carica un elenco al passo 1 oppure usa “+ Aggiungi riga”.</div>'; totals(); return; }
-  const HEAD = '<tr><th></th><th>#</th><th>Codice</th><th>Descrizione</th><th>Gramm.</th><th>Promo</th><th title="Solo Prendi/Spendi: quantità minima">Soglia</th><th title="Rimonta: usa il prezzo della griglia">Rim.</th><th>Sconto %</th><th>Prezzo</th><th>Barrato</th><th>Unità</th><th>Al Kg</th><th>Fino al</th><th>Intestazione</th><th>Volantino</th><th class="fmtcol">Formato · copie</th><th></th></tr>';
+  const HEAD = '<tr><th></th><th>#</th><th>Codice</th><th>Descrizione</th><th>Gramm.</th><th>Promo</th><th title="Solo Prendi/Spendi: quantità minima">Soglia</th><th title="Rimonta: usa il prezzo della griglia">Rim.</th><th>Sconto %</th><th>Prezzo</th><th>Barrato</th><th>Unità</th><th>Al Kg</th><th>Fino al</th><th>Intestazione</th><th title="Ovale PRODUZIONE PROPRIA nel formato A4 verticale">Prod. propria</th><th>Volantino</th><th class="fmtcol">Formato · copie</th><th></th></tr>';
   const wrapT = rows => `<div class="sheetwrap"><table class="sheet"><thead>${HEAD}</thead><tbody>${rows}</tbody></table></div>`;
   const daStampare = r => r.on && r.formato && !r.esempio;
   $('#nTutte').textContent = state.rows.length; $('#nStampa').textContent = state.rows.filter(daStampare).length;
@@ -1166,7 +1251,7 @@ function render() {
   let html;
   if (state.vista === 'stampa') {
     vis = vis.filter(([r]) => daStampare(r));
-    html = wrapT(['A3', 'G', 'P'].map(f => { const g = vis.filter(([r]) => r.formato === f); return g.length ? `<tr class="grp g-${f}"><td colspan="19">${{ A3: '🟥', G: '🟧', P: '🟦' }[f]} ${NOMI[f]} · ${g.length}</td></tr>` + g.map(([r, i]) => rowHtml(r, i + 1)).join('') : ''; }).join(''));
+    html = wrapT(FORMATI.map(f => { const g = vis.filter(([r]) => r.formato === f); return g.length ? `<tr class="grp g-${f}"><td colspan="20">${FMT_ICO[f]} ${NOMI[f]} · ${g.length}</td></tr>` + g.map(([r, i]) => rowHtml(r, i + 1)).join('') : ''; }).join(''));
     if (!vis.length) html = '<div class="empty">Nessun cartello da stampare: scegli un formato nelle righe (vista “Tutto l\'elenco”).</div>';
   } else html = vis.length ? wrapT(vis.map(([r, i]) => rowHtml(r, i + 1)).join('')) : (extra ? '' : '<div class="empty">Nessuna riga corrisponde alla ricerca.</div>');
   L.innerHTML = extra + html;
@@ -1174,17 +1259,15 @@ function render() {
 }
 function totals() {
   const on = state.rows.filter(r => r.on && !r.esempio);
-  const cnt = f => paginate(on.filter(r => r.formato === f), f);
-  const a = cnt('A3'), g = cnt('G'), p = cnt('P');
+  const nc = f => on.filter(r => r.formato === f).reduce((t, r) => t + (parseInt(r.copie, 10) || 1), 0);
+  const fogli = f => paginate(on.filter(r => r.formato === f), f).length;
   const nofmt = on.filter(r => !r.formato).length;
-  const nc = f => on.filter(r => r.formato === f).reduce((s, r) => s + (parseInt(r.copie, 10) || 1), 0);
-  $('#tot').innerHTML = `<span class="tc f-A3">🟥 A3 <b>${nc('A3')}</b></span> <span class="tc f-G">🟧 Grandi <b>${nc('G')}</b> · ${g.length} fogli</span> <span class="tc f-P">🟦 Piccoli <b>${nc('P')}</b> · ${p.length} fogli</span>` + (nofmt ? ` <span class="tc">⬜ ${nofmt} senza formato</span>` : '');
-  $('#bSend').disabled = !(a.length || g.length || p.length);
-  const n = nc('A3') + nc('G') + nc('P');
+  const LAB = { A3: 'A3', A4O: 'A4 oriz.', A4V: 'A4 vert.', G: 'Grandi', P: 'Piccoli' };
+  $('#tot').innerHTML = FORMATI.filter(f => f === 'A3' || f === 'G' || f === 'P' || nc(f)).map(f => `<span class="tc f-${f}">${FMT_ICO[f]} ${LAB[f]} <b>${nc(f)}</b>${f === 'G' || f === 'P' ? ' · ' + fogli(f) + ' fogli' : ''}</span>`).join(' ') + (nofmt ? ` <span class="tc">⬜ ${nofmt} senza formato</span>` : '');
+  const n = FORMATI.reduce((t, f) => t + nc(f), 0);
+  $('#bSend').disabled = !n;
   $('#moti').textContent = n ? `💪 ${n} cartelli pronti in un clic · a mano sarebbero circa ${n * 3} minuti (stima 3 min a cartello)` : '👉 Scegli il formato delle righe e premi INVIA';
-
 }
-function goStep2() { setTimeout(() => { const sec = $('#list').closest('section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }
 function rowOf(el) { const it = el.closest('tr[data-id]'); return it ? state.rows.find(r => r.id === Number(it.dataset.id)) : null; }
 $('#list').addEventListener('input', e => {
   const k = e.target.dataset.k; const r = rowOf(e.target); if (!k || !r) return;
@@ -1192,6 +1275,7 @@ $('#list').addEventListener('input', e => {
   if (k === 'on') r.on = e.target.checked;
   else if (k === 'rimonta') { r.rimonta = e.target.checked; applyPrice(r); save(); render(); return; }
   else if (k === 'formato') { r.formato = e.target.value; save(); render(); return; }
+  else if (k === 'propria') r.propria = e.target.checked;
   else if (k === 'intest') r.intest = e.target.value.trim() === '' ? null : e.target.value;
   else r[k] = e.target.value;
   if (k === 'prezzo' && r.vol && r.vol.stato === 'check') { r.vol.stato = 'man'; if (r.griglia) r.griglia.prezzo = r.prezzo; }
@@ -1243,11 +1327,11 @@ $('#bStop').addEventListener('click', () => stopCtl && stopCtl.abort());
 let ANA = null, qT = null;
 $('#q').addEventListener('input', () => { clearTimeout(qT); qT = setTimeout(render, 200); });
 /* ---------- Excel elenco (formato da scegliere) ---------- */
-const XL_FMT = { A3: 'A3', G: 'STOPPER GRANDE', P: 'STOPPER PICCOLO', '': 'NON STAMPARE' };
+const XL_FMT = { A3: 'A3', A4O: 'A4 ORIZZONTALE', A4V: 'A4 VERTICALE', G: 'STOPPER GRANDE', P: 'STOPPER PICCOLO', '': 'NON STAMPARE' };
 const XL_COLS = [
   ['CODICE', 'codice', 12], ['DESCRIZIONE', 'desc', 40], ['GRAMMATURA', 'gramm', 12], ['PROMO', 'promo', 12], ['SOGLIA', 'soglia', 14], ['FORMATO', 'formato', 18], ['COPIE', 'copie', 8],
   ['PREZZO', 'prezzo', 10], ['PREZZO PRIMA', 'prima', 13], ['SCONTO %', 'sconto', 10], ['UNITA', 'unita', 10],
-  ['AL KG', 'kg', 10], ['FINO AL', 'fino', 12], ['INTESTAZIONE', 'intest', 26], ['RIMONTA', 'rimonta', 10], ['PREZZO GRIGLIA', 'pg', 14], ['PREZZO VOLANTINO', 'vp', 16], ['CONFRONTO VOLANTINO', 'vs', 22], ['NOTE LETTURA', 'dubbio', 30],
+  ['AL KG', 'kg', 10], ['FINO AL', 'fino', 12], ['INTESTAZIONE', 'intest', 26], ['RIMONTA', 'rimonta', 10], ['PROD. PROPRIA', 'propria', 13], ['PREZZO GRIGLIA', 'pg', 14], ['PREZZO VOLANTINO', 'vp', 16], ['CONFRONTO VOLANTINO', 'vs', 22], ['NOTE LETTURA', 'dubbio', 30],
 ];
 async function saveFile(name, blob) {
   if (downloads) { await downloads.save({ filename: name, data: blob }); return; }
@@ -1267,13 +1351,13 @@ $('#bXlsOut').addEventListener('click', async () => {
     rows.forEach(r => {
       const kv = kgValue(r);
       ws.addRow(XL_COLS.map(([, k]) => k === 'formato' ? XL_FMT[r.formato || ''] : k === 'kg' ? (r.kg || (kv && kv.calc ? kv.v : '')) : k === 'intest' ? headerText(r, state.tipo)
-        : k === 'fino' ? (r.fino || finoText({}, state.fino, true).replace('Fino al ', '')) : k === 'rimonta' ? (r.rimonta ? 'SI' : '') : k === 'pg' ? (r.griglia ? r.griglia.prezzo : r.prezzo) || '' : k === 'vp' ? (r.vol && r.vol.prezzo || '') : k === 'vs' ? (r.vol ? vs[r.vol.stato] || '' : '') : k === 'copie' ? (parseInt(r.copie, 10) || 1) : (r[k] == null ? '' : String(r[k]))));
+        : k === 'fino' ? (r.fino || finoText({}, state.fino, true).replace('Fino al ', '')) : k === 'rimonta' ? (r.rimonta ? 'SI' : '') : k === 'propria' ? (r.propria ? 'SI' : '') : k === 'pg' ? (r.griglia ? r.griglia.prezzo : r.prezzo) || '' : k === 'vp' ? (r.vol && r.vol.prezzo || '') : k === 'vs' ? (r.vol ? vs[r.vol.stato] || '' : '') : k === 'copie' ? (parseInt(r.copie, 10) || 1) : (r[k] == null ? '' : String(r[k]))));
     });
     const hr = ws.getRow(1); hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }; hr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3000F' } }; hr.height = 22;
     const fc = XL_COLS.findIndex(c => c[1] === 'formato') + 1, vc = XL_COLS.findIndex(c => c[1] === 'vs') + 1, uc = XL_COLS.findIndex(c => c[1] === 'unita') + 1, cc = XL_COLS.findIndex(c => c[1] === 'codice') + 1;
     for (let i = 2; i <= rows.length + 1; i++) {
       const cell = ws.getCell(i, fc);
-      cell.dataValidation = { type: 'list', allowBlank: false, formulae: ['"A3,STOPPER GRANDE,STOPPER PICCOLO,NON STAMPARE"'], showErrorMessage: true, errorTitle: 'Formato', error: 'Scegli dalla lista' };
+      cell.dataValidation = { type: 'list', allowBlank: false, formulae: ['"A3,A4 ORIZZONTALE,A4 VERTICALE,STOPPER GRANDE,STOPPER PICCOLO,NON STAMPARE"'], showErrorMessage: true, errorTitle: 'Formato', error: 'Scegli dalla lista' };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }; cell.font = { bold: true };
       ws.getCell(i, uc).dataValidation = { type: 'list', allowBlank: true, formulae: ['"all\'etto,al pz,al kg,al litro"'] };
       ws.getCell(i, cc).numFmt = '@';
@@ -1317,7 +1401,7 @@ function importAppRows(data) {
   const h = (data[0] || []).map(x => String(x).trim().toUpperCase());
   const col = name => h.indexOf(name);
   if (col('DESCRIZIONE') < 0 || col('FORMATO') < 0) return null;
-  const back = { 'A3': 'A3', 'STOPPER GRANDE': 'G', 'STOPPER GRANDI': 'G', 'STOPPER PICCOLO': 'P', 'STOPPER PICCOLI': 'P' };
+  const back = { 'A3': 'A3', 'A4 ORIZZONTALE': 'A4O', 'A4 VERTICALE': 'A4V', 'STOPPER GRANDE': 'G', 'STOPPER GRANDI': 'G', 'STOPPER PICCOLO': 'P', 'STOPPER PICCOLI': 'P' };
   const old = state.rows.filter(r => !r.esempio);
   const out = [];
   data.slice(1).forEach(row => {
@@ -1329,7 +1413,7 @@ function importAppRows(data) {
     const r = newRow({
       codice: g('CODICE'), desc: g('DESCRIZIONE'), gramm: g('GRAMMATURA'), promo: /fidel|payback/i.test(g('PROMO')) ? 'FIDELITY' : /prendi/i.test(g('PROMO')) ? 'PRENDI' : /weekend/i.test(g('PROMO')) ? 'WEEKEND' : 'OFFERTA', soglia: g('SOGLIA'), formato: back[g('FORMATO').toUpperCase()] || '', copie: parseInt(g('COPIE'), 10) || 1,
       prezzo: money(g('PREZZO')) || g('PREZZO'), prima: money(g('PREZZO PRIMA')) || '', sconto: pct(g('SCONTO %')),
-      unita: ["all'etto", 'al pz', 'al kg', 'al litro'].includes(u) ? u : unitFrom(u), dubbio: g('NOTE LETTURA'), rimonta: /^s/i.test(g('RIMONTA')),
+      unita: ["all'etto", 'al pz', 'al kg', 'al litro'].includes(u) ? u : unitFrom(u), dubbio: g('NOTE LETTURA'), rimonta: /^s/i.test(g('RIMONTA')), propria: /^s/i.test(g('PROD. PROPRIA')),
       vol: prev ? prev.vol : null,
     });
     const kv = kgValue(Object.assign({}, r, { kg: '' }));
@@ -1346,13 +1430,13 @@ function importAppRows(data) {
 }
 
 /* ---------- PDF e anteprima ---------- */
-const NOMI = { A3: 'CARTELLI A3', G: 'STOPPER GRANDI', P: 'STOPPER PICCOLI' };
+const NOMI = { A3: 'CARTELLI A3', A4O: 'CARTELLI A4 ORIZZONTALI', A4V: 'CARTELLI A4 VERTICALI', G: 'STOPPER GRANDI', P: 'STOPPER PICCOLI' };
 function printable(f) { return state.rows.filter(r => r.on && !r.esempio && r.formato === f); }
 let sendArmed = false;
 function makeFiles() {
   const fp = dateParts(state.fino); const suf = fp ? ' fino al ' + fp.d + '-' + fp.m : '';
   const out = [];
-  for (const f of ['A3', 'G', 'P']) {
+  for (const f of FORMATI) {
     const items = printable(f); if (!items.length) continue;
     const { doc, pages } = buildPdf(window.jspdf.jsPDF, f, items, ctx());
     out.push({ f, pages, file: new File([doc.output('blob')], `${NOMI[f]}${suf}.pdf`, { type: 'application/pdf' }) });
@@ -1361,9 +1445,9 @@ function makeFiles() {
 }
 const EVVIVA = ['🎉 Fatto! Pausa caffè meritata ☕', '🚀 Cartelli pronti in un lampo!', '👏 Ottimo lavoro: prezzi identici al volantino.', '🌟 Un altro volantino sistemato senza fatica!', '😎 Lavoro snello, negozio in ordine.'];
 const evviva = () => EVVIVA[Math.floor(Math.random() * EVVIVA.length)];
-const CARTA = { A3: 'carta A3 orizzontale', G: 'carta A4 verticale', P: 'carta A4 verticale' };
+const CARTA = { A3: 'carta A3 orizzontale', A4O: 'carta A4 orizzontale', A4V: 'carta A4 verticale', G: 'carta A4 verticale', P: 'carta A4 pretagliata (6 etichette)' };
 function openSend() {
-  const all = ['A3', 'G', 'P'].flatMap(f => printable(f));
+  const all = FORMATI.flatMap(f => printable(f));
   const miss = all.filter(r => !money(r.prezzo) || (r.vol && r.vol.stato === 'check'));
   $('#sendWarn').textContent = miss.length ? `⚠️ Attenzione: ${miss.length} cartelli senza prezzo o da controllare (${miss.slice(0, 3).map(r => r.desc).join(', ')}${miss.length > 3 ? '…' : ''}).` : '';
   $('#sendChoice').hidden = false; $('#printList').hidden = true; $('#sendMsg').textContent = '';
@@ -1403,12 +1487,12 @@ $('#bChoosePdf').addEventListener('click', async () => {
 });
 $('#bPrev').addEventListener('click', () => {
   const box = $('#pages'); box.innerHTML = ''; let n = 0;
-  for (const f of ['A3', 'G', 'P']) {
+  for (const f of FORMATI) {
     const pages = paginate(printable(f), f);
     pages.forEach(pg => {
       if (n >= 40) return; n++;
-      const sz = f === 'A3' ? PAGE.A3 : PAGE.A4; const cv = document.createElement('canvas');
-      const wpx = f === 'A3' ? 620 : 300; const s = wpx * 2 / sz.w; cv.width = wpx * 2; cv.height = Math.round(sz.h * s); cv.style.width = wpx + 'px';
+      const sz = f === 'A3' ? PAGE.A3 : f === 'A4O' ? PAGE.A4O : PAGE.A4; const cv = document.createElement('canvas');
+      const wpx = f === 'A3' || f === 'A4O' ? 620 : 300; const s = wpx * 2 / sz.w; cv.width = wpx * 2; cv.height = Math.round(sz.h * s); cv.style.width = wpx + 'px';
       const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.setTransform(s, 0, 0, s, 0, 0);
       const cp = new CanvasPainter(c); drawPage(cp, f, pg, Object.assign(ctx(), { u: uniform(cp, f, printable(f)) })); box.appendChild(cv);
     });
