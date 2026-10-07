@@ -309,7 +309,12 @@ button.usa{padding:2px 7px;font-size:11px;border-color:var(--bad);color:var(--ba
 const RED = '#FF0000';
 const PB_BLUE = '#4695D2', PB_RED = '#E30613'; // colori del volantino (bollino Payback, Prendi/Spendi)
 const PAGE = { A3: { w: 1190.55, h: 841.89 }, A4: { w: 595.28, h: 841.89 } };
-const G_TOPS = [19, 218, 429, 623]; // modello: 13/212/423/617, abbassati di 6 pt per il margine della stampante
+// stopper GRANDI su carta pretagliata A4: 4 etichette 14,5 x 6,1 cm una sotto l'altra, margini 2,1 sopra e sotto, 3,4 sx, 3,1 dx.
+// I 1,1 cm che avanzano in altezza sono gli spazi tra le etichette (3 x 0,37 cm).
+const G_CELL = { w: 14.5 * 28.3465, h: 6.1 * 28.3465, left: 3.4 * 28.3465, top: 2.1 * 28.3465, gap: (29.7 - 2.1 - 2.1 - 4 * 6.1) / 3 * 28.3465 };
+// il disegno del modello (fascia 466 pt, alto ~198 pt) viene ridotto e centrato in ogni etichetta
+const G_K = Math.min((G_CELL.w - 12) / 466, (G_CELL.h - 8) / 198);
+function gCell(slot) { return { x: G_CELL.left, y: G_CELL.top + slot * (G_CELL.h + G_CELL.gap) }; }
 const CM = 28.3465;
 // stopper piccoli su carta PRETAGLIATA A4: 6 etichette 7,5 x 8 cm, margini 2,8 cm sopra, 2,9 sotto, 3 a sinistra e a destra
 const P_CELL = { w: 7.5 * CM, h: 8 * CM, left: 3 * CM, top: 2.8 * CM };
@@ -465,8 +470,10 @@ function drawA3(p, r, ctx) {
   if (kg) p.text(kg, 1010, 791, { size: 35, align: 'center' });
 }
 
-function drawG(p, r, slot, ctx) {
-  const R = G_TOPS[slot];
+function drawG(p0, r, slot, ctx) {
+  const c = gCell(slot);
+  const p = new ScaledPainter(p0, G_K, c.x + (G_CELL.w - 466 * G_K) / 2 - 70 * G_K, c.y + (G_CELL.h - 198 * G_K) / 2);
+  const R = 0; // coordinate del modello, con il cartello che parte da 0
   p.rect(70, R, 466, 60, RED, 12);
   const h = headerText(r, ctx.tipo);
   const hs = uSize(ctx, r, 'head', fitHeadG(p, r));
@@ -490,13 +497,13 @@ function drawG(p, r, slot, ctx) {
   if (prima) { last += 26; strike(p, `${prima} €`, 86, last, 24, true, 1.2); }
   if (prG && !prima) {
     // riquadro logo a sinistra, come nello stopper piccolo, e sotto la soglia
-    const sgG = sogliaText(r), top = last + 8, room = Math.min(R + 190, (slot < 3 ? G_TOPS[slot + 1] : 842) - 8) - top;
+    const sgG = sogliaText(r), top = last + 8, room = R + 190 - top;
     const LH = Math.min(32, Math.max(24, room - (sgG ? 17 : 0))), LW = LH * 122 / 56; // stessa misura su tutti (32 pt), più piccolo solo se non c'è spazio
     prendiLogo(p, 82, top, LW, LH);
     if (sgG) p.text(sgG, 82, top + LH + 14, { size: fitSize(p, sgG, 230, 14, 8, true), bold: true, color: PB_RED });
   }
 
-  const lim = slot < 3 ? G_TOPS[slot + 1] : 842;
+  const lim = 205;
   bigPrice(p, r.prezzo, { right: 518, base: Math.min(R + 180, lim - 22), si: 115, sd: 66, se: 44, gap: 4, minLeft: 250 });
   const f = finoText(r, ctx.fino, false);
   if (f) p.text(f, 307, Math.min(R + 193, lim - 7), { size: 9, align: 'center' });
@@ -585,12 +592,12 @@ function drawP(p, r, slot, ctx) {
 PAGE.A4O = { w: 841.89, h: 595.28 };
 const K_A4O = 841.89 / 1190.75;
 class ScaledPainter {
-  constructor(p, k) { this.p = p; this.k = k; }
+  constructor(p, k, ox = 0, oy = 0) { this.p = p; this.k = k; this.ox = ox; this.oy = oy; }
   w(s, size, b) { return this.p.w(s, size * this.k, b) / this.k; }
-  text(s, x, y, o) { this.p.text(s, x * this.k, y * this.k, Object.assign({}, o, { size: o.size * this.k })); }
-  rect(x, y, w, h, c, r) { this.p.rect(x * this.k, y * this.k, w * this.k, h * this.k, c, r ? r * this.k : r); }
-  line(a, b, c, d, lw) { this.p.line(a * this.k, b * this.k, c * this.k, d * this.k, lw * this.k); }
-  ellipse(cx, cy, rx, ry, c) { this.p.ellipse(cx * this.k, cy * this.k, rx * this.k, ry * this.k, c); }
+  text(s, x, y, o) { this.p.text(s, this.ox + x * this.k, this.oy + y * this.k, Object.assign({}, o, { size: o.size * this.k })); }
+  rect(x, y, w, h, c, r) { this.p.rect(this.ox + x * this.k, this.oy + y * this.k, w * this.k, h * this.k, c, r ? r * this.k : r); }
+  line(a, b, c, d, lw) { this.p.line(this.ox + a * this.k, this.oy + b * this.k, this.ox + c * this.k, this.oy + d * this.k, lw * this.k); }
+  ellipse(cx, cy, rx, ry, c) { this.p.ellipse(this.ox + cx * this.k, this.oy + cy * this.k, rx * this.k, ry * this.k, c); }
 }
 const offertaCase = h => h.replace(/^OFFERTA\b/, 'Offerta');
 function fitDescA4O(p, r) { const d = descFull(r); for (const s of [80, 72, 64, 58, 52]) if (wrap(p, d, [1090], s, true).length <= 2) return s; return 52; }
@@ -1342,7 +1349,7 @@ function drawThumb(el, r) {
   if (r.formato === 'A3') box = { x: 0, y: 0, w: PAGE.A3.w, h: PAGE.A3.h };
   else if (r.formato === 'A4O') box = { x: 0, y: 0, w: PAGE.A4O.w, h: PAGE.A4O.h };
   else if (r.formato === 'A4V') box = { x: 0, y: 0, w: PAGE.A4.w, h: PAGE.A4.h };
-  else if (r.formato === 'G') box = { x: 55, y: 5, w: 500, h: 205 };
+  else if (r.formato === 'G') box = { x: G_CELL.left, y: G_CELL.top, w: G_CELL.w, h: G_CELL.h };
   else box = { x: P_CELL.left, y: P_CELL.top, w: P_CELL.w, h: P_CELL.h };
   const s = cv.width / box.w; cv.height = Math.round(box.h * s);
   c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
@@ -1580,7 +1587,7 @@ function makeFiles() {
 }
 const EVVIVA = ['🎉 Fatto! Pausa caffè meritata ☕', '🚀 Cartelli pronti in un lampo!', '👏 Ottimo lavoro: prezzi identici al volantino.', '🌟 Un altro volantino sistemato senza fatica!', '😎 Lavoro snello, negozio in ordine.'];
 const evviva = () => EVVIVA[Math.floor(Math.random() * EVVIVA.length)];
-const CARTA = { A3: 'carta A3 orizzontale', A4O: 'carta A4 orizzontale', A4V: 'carta A4 verticale', G: 'carta A4 verticale', P: 'carta A4 pretagliata (6 etichette)' };
+const CARTA = { A3: 'carta A3 orizzontale', A4O: 'carta A4 orizzontale', A4V: 'carta A4 verticale', G: 'carta A4 pretagliata (4 etichette)', P: 'carta A4 pretagliata (6 etichette)' };
 function openSend() {
   const all = FORMATI.flatMap(f => printable(f));
   const miss = all.filter(r => !money(r.prezzo) || (r.vol && r.vol.stato === 'check'));
