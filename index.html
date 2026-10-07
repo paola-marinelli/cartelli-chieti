@@ -705,7 +705,7 @@ const ESEMPI = [
 ];
 let uid = 1;
 function newRow(o) {
-  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', propria: false, rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
+  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', propria: false, nota: '', rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
 }
 let state = { fino: '', tipo: 'OFFERTA', vista: 'tutte', rows: [] };
 function save() { try { localStorage.setItem('cartelli-chieti', JSON.stringify(state)); } catch (e) {} }
@@ -790,7 +790,7 @@ const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.te
 const isPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 
 /* ---------- interpretazione locale (senza Claude) ---------- */
-const RX_PRICE = /(\d{1,4}[.,]\d{1,2})(?!\s*%)/g;
+const RX_PRICE = /(?<![\d.,])(\d{1,4}[.,]\d{1,2})(?![\d.,]*\s*%)(?![\d])/g;
 function unitFrom(s) {
   const t = s.toLowerCase();
   if (/\b(all'?\s*etto|l'?\s*etto|etto|hg)\b/.test(t)) return "all'etto";
@@ -873,13 +873,17 @@ async function readElenco() {
   const btn = $('#bElenco'); btn.disabled = true;
   try {
     let found = [];
-    let texts = [], images = [], appRows = null;
+    let texts = [], images = [], appRows = null; const dinRows = [];
     if (pasted) texts.push(pasted);
     for (const f of files) {
       status('Apro ' + f.name + '…');
       if (isImg(f)) images.push(f);
       else if (isPdf(f)) {
         const doc = await pdfDoc(f); let t = '';
+        // presentazione DINAMICHE (tabelle ASTRA/PLU/DESCRIZIONE/INDICAZIONI): lettura esatta della tabella
+        const din = [];
+        for (let i = 1; i <= doc.numPages; i++) { const pg = await doc.getPage(i); const dr = dinExtract(await pageItems(pg), i); if (dr && dr.length) din.push(...dr.map(x => Object.assign(x, { _pg: pg }))); }
+        if (din.length) { dinRows.push(...din); continue; }
         for (let i = 1; i <= doc.numPages; i++) t += (await pdfPageText(await doc.getPage(i))) + '\n';
         if (t.replace(/\s/g, '').length > 40) texts.push(t);
         else for (let i = 1; i <= doc.numPages; i++) images.push(...await pdfPageImages(await doc.getPage(i), false));
@@ -892,6 +896,30 @@ async function readElenco() {
           if (sample) texts.push(tableToText(t)); else t.forEach(s => found.push(...parseTable(s.rows))); }
         else texts.push(t);
       }
+    }
+    if (dinRows.length) {
+      const senza = dinRows.filter(r => !money(r.prezzo));
+      if (senza.length && sample && imgMax) {
+        const pages = [...new Set(senza.map(r => r._pg))];
+        for (let k = 0; k < pages.length; k++) {
+          const pg = pages[k], rs = senza.filter(r => r._pg === pg);
+          status(`Claude legge i prezzi dalla foto del volantino: pagina ${rs[0].pagina} (${k + 1}/${pages.length})…`);
+          try {
+            const out = await sample.json(promptDinPrezzi(rs.map((r, i) => `${i}: ${r.desc}`).join('\n')), { images: (await pdfPageImages(pg, false)).slice(0, imgMax) });
+            (Array.isArray(out) ? out : []).forEach(o => {
+              const r = rs[Number(o.id)]; if (!r || !money(o.prezzo)) return;
+              const tp = String(o.tipologia || '').toLowerCase(), u = String(o.unita || '').toLowerCase();
+              r.prezzo = money(o.prezzo); r.prima = money(o.prezzo_prima) || ''; r.sconto = o.sconto ? pct(o.sconto) : '';
+              if (u) r.unita = /etto/.test(u) ? "all'etto" : /kg/.test(u) ? 'al kg' : /pz|pezz/.test(u) ? 'al pz' : r.unita;
+              if (/fidel/.test(tp)) r.promo = 'FIDELITY';
+              r.dubbio = r.dubbio.replace(/prezzo nella foto del volantino( · )?/, '');
+              r.dubbio = (r.dubbio ? r.dubbio + ' · ' : '') + 'prezzo letto dalla foto: controlla';
+            });
+          } catch (e) { if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled')) break; }
+        }
+      }
+      dinRows.forEach(r => { delete r._pg; r.nota = r.indicazioni || ''; delete r.indicazioni; delete r.pagina; });
+      found.push(...dinRows);
     }
     if (appRows && !texts.length && !images.length) {
       state.rows = appRows; state.vista = 'tutte'; save(); render(); goStep2();
@@ -934,11 +962,26 @@ function tokens(s) { return normT(s).replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).fi
 function tokEq(a, b) { if (a === b) return true; const n = Math.min(a.length, b.length); if (n < 4) return false; const k = Math.min(n, 5); return a.slice(0, k) === b.slice(0, k); }
 function priceForms(p) { const n = num(p); if (isNaN(n)) return []; const f = [n.toFixed(2).replace('.', ',')]; if (f[0].endsWith(',00')) f.push(String(Math.round(n)) + ' €'); return f; }
 // trovato = stesso prezzo promo sulla pagina con almeno una parola forte della descrizione vicino (oppure "SU TUTTA LA LINEA" + marca + stesso sconto)
-function localMatch(rows, text) {
+function localMatch(rows, text, flyer) {
   const L = normT(text).replace(/(\d)[ \t]*\n[ \t]*(,\d)/g, '$1$2').replace(/(\d)[ \t]*\n[ \t]*€/g, '$1 €').split(/\n/).map(l => l.trim()).filter(Boolean);
   const res = [];
   rows.forEach(r => {
     const tk = tokens(r.desc); if (!tk.length) return;
+    if (!money(r.prezzo) && flyer && flyer.length) {
+      let fb = null;
+      // abbinamento severo: niente parole generiche, quasi tutte le parole uguali (il prezzo del volantino vince, meglio "non trovato" che sbagliato)
+      const GEN = new Set(['DOP', 'IGP', 'AOP', 'AOC', 'STG', 'TDI', 'GUSTI', 'ASSORTITI', 'ITALIA', 'TERRE', 'FETTE', 'PEZZI', 'CONF']);
+      const tkN = tk.filter(t => !GEN.has(t));
+      const eqS = (a, b) => { if (a === b) return true; const n = Math.min(a.length, b.length); return n >= 5 && Math.abs(a.length - b.length) <= 2 && a.slice(0, n - 1) === b.slice(0, n - 1); }; // singolare/plurale sì, Insalata/Insalatissime no
+      if (tkN.length) flyer.forEach(fr => {
+        const ft = tokens(fr.desc + ' ' + (fr.gramm || ''));
+        const hit = tkN.filter(t => ft.some(w => eqS(t, w))), sc = hit.length / tkN.length;
+        const ok = tkN.length === 1 ? hit.length === 1 && tkN[0].length >= 6 && ft.includes(tkN[0]) : hit.length >= 2 && sc >= 0.75;
+        if (ok && (!fb || sc > fb.sc)) fb = { sc, fr };
+      });
+      if (fb) res.push({ id: r.id, prezzo: fb.fr.prezzo, prezzo_prima: fb.fr.prima || null, sconto: fb.fr.sconto || null, tipologia: fb.fr.promo === 'FIDELITY' ? 'fidelity' : null, descrizione_volantino: fb.fr.desc, certezza: 'media' });
+      return;
+    }
     const pf = priceForms(r.prezzo); let best = null;
     L.forEach((l, i) => {
       if (!pf.some(f => l.includes(f))) return;
@@ -1024,14 +1067,15 @@ async function readVol() {
         let imgs, txt = '';
         if (j.doc) { const pg = await j.doc.getPage(j.i); txt = await pdfPageText(pg); status(`Preparo ${label} (${unit}/${total})…`); imgs = await pdfPageImages(pg, imgMax >= 2); }
         else imgs = [j.f];
-        if (!imgMax) { applyVol(localMatch(rows, await pdfPageRaw(await j.doc.getPage(j.i))), label); continue; }
+        if (!imgMax) { const pg = await j.doc.getPage(j.i); applyVol(localMatch(rows, await pdfPageRaw(pg), volExtract(await pageItems(pg), j.i)), label); continue; }
         status(`Claude cerca gli articoli in ${label} (${unit}/${total})…`);
         const out = await sample.json(promptVol(list, txt), { images: imgs.slice(0, imgMax), signal: stopCtl.signal, modelTier: 'default' });
         applyVol(Array.isArray(out) ? out : [], label);
       } else {
         status(`Leggo ${label} (${unit}/${total})…`);
-        const txt = j.doc ? await pdfPageRaw(await j.doc.getPage(j.i)) : await ocr(j.f, status);
-        applyVol(localMatch(rows, txt), label);
+        let txt, fl = null;
+        if (j.doc) { const pg = await j.doc.getPage(j.i); txt = await pdfPageRaw(pg); fl = volExtract(await pageItems(pg), j.i); } else txt = await ocr(j.f, status);
+        applyVol(localMatch(rows, txt, fl), label);
       }
       render();
     }
@@ -1118,6 +1162,77 @@ function volExtract(items, pageNo) {
   }).filter(r => { const k = r.desc + '|' + r.prezzo; if (!r.desc || seen.has(k)) return false; seen.add(k); return true; })
     .flatMap(r => { const pp = prendi.filter(x => x.prod === r._a).map(x => Object.assign({}, r, { prezzo: x.prezzo, prima: '', sconto: '', promo: 'PRENDI', soglia: x.soglia, unita: x.unita || r.unita, kg: '' })); delete r._a; pp.forEach(x => delete x._a); return [r, ...pp]; });
 }
+// Presentazione "DINAMICHE VOLANTINO": tabelle ASTRA/PLU/DESCRIZIONE/INDICAZIONI con sfrido e margini % (MAI prezzi)
+// e griglie "Articolo/Descrizione/Codice PLU/Prezzo casse". Il prezzo si prende solo dove è scritto:
+// "RIMONTATO A 1,49 L'ETTO" nelle indicazioni oppure la colonna "Prezzo casse"; altrimenti è nella foto del volantino.
+function dinExtract(items, pageNo) {
+  const T = s => String(s).replace(/\s+/g, ' ').trim();
+  const it = items.map(i => ({ ...i, t: T(i.t) })).filter(i => i.t);
+  const hDesc = it.find(i => /^DESCRIZIONE$/i.test(i.t));
+  if (!hDesc) return null;
+  const hy = hDesc.y, head = it.filter(i => Math.abs(i.y - hy) < 14);
+  const hCode = head.find(i => /^(ASTRA|ARTICOLO)$/i.test(i.t));
+  if (!hCode) return null;
+  const cx = i => i.x + (i.w || 0) / 2;
+  const hInd = head.find(i => /^INDICAZIONI$/i.test(i.t));
+  const hPrz = head.find(i => /PREZZO/i.test(i.t));
+  const hPlu = head.find(i => /PLU/i.test(i.t));
+  const hMarg = head.filter(i => /SFRIDO|MARG/i.test(i.t)).sort((a, b) => a.x - b.x)[0];
+  const body = it.filter(i => i.y > hy + 6 && i.x >= hCode.x - 45);
+  const codeLim = hPlu && hPlu.x > hCode.x ? (cx(hCode) + cx(hPlu)) / 2 : hCode.x + (hCode.w || 40) + 30;
+  const isCode = i => /^\d{4,8}$/.test(i.t) && i.x < codeLim;
+  const rows = body.filter(isCode).sort((a, b) => a.y - b.y).map(c => ({ codice: c.t, y: c.y, plu: '', desc: [], ind: [], prezzo: '' }));
+  // griglie con prezzo: una riga senza codice articolo ma con il suo prezzo è comunque un articolo
+  if (hPrz) body.filter(i => /^\d{1,4},\d{2}$/.test(i.t) && Math.abs(cx(i) - cx(hPrz)) < 120 && !rows.some(r => Math.abs(r.y - i.y) < 9)).forEach(i => rows.push({ codice: '', y: i.y, plu: '', desc: [], ind: [], prezzo: '' }));
+  rows.sort((a, b) => a.y - b.y);
+  if (!rows.length) return null;
+  // confine descrizione | indicazioni: la colonna descrizione è simmetrica attorno al suo titolo
+  const txtLeft = Math.min(...body.filter(i => /[A-Za-z]/.test(i.t) && i.x < cx(hDesc) && i.x > hCode.x + 20).map(i => i.x).concat([hDesc.x]));
+  const indStart = hInd ? Math.max(2 * cx(hDesc) - txtLeft, cx(hDesc) + 20) : 1e9;
+  const rightLimit = hMarg ? hMarg.x - 8 : 1e9;
+  const indItems = [];
+  body.forEach(i => {
+    if (isCode(i)) return;
+    let r = null, best = 1e9;
+    rows.forEach(x => { const d = Math.abs(x.y - i.y); if (d < best) { best = d; r = x; } });
+    if (!r || best > 32) return;
+    if (hPlu && /^\d{1,5}(,\d+)?$/.test(i.t) && Math.abs(cx(i) - cx(hPlu)) < 55) { r.plu = r.plu || i.t; return; }
+    if (hPrz && /^\d{1,4},\d{2}$/.test(i.t) && Math.abs(cx(i) - cx(hPrz)) < 120) { r.prezzo = i.t; return; }
+    if (/%$/.test(i.t) || i.x >= rightLimit) return; // sfrido e margini: mai prezzi
+    if (i.x >= indStart) indItems.push(i); else r.desc.push(i);
+  });
+  // indicazioni su più righe: blocchi di righe vicine, assegnati alla riga della tabella più vicina al centro del blocco
+  const blocks = [];
+  indItems.sort((a, b) => a.y - b.y).forEach(i => { const b = blocks[blocks.length - 1]; if (b && i.y - b.bottom <= 13.5) { b.items.push(i); b.bottom = Math.max(b.bottom, i.y); } else blocks.push({ top: i.y, bottom: i.y, items: [i] }); });
+  blocks.forEach(b => { const c = (b.top + b.bottom) / 2; let r = null, best = 1e9; rows.forEach(x => { const d = Math.abs(x.y - c); if (d < best) { best = d; r = x; } }); if (r) r.ind.push(...b.items); });
+  const join = a => a.sort((p, q) => p.y - q.y || p.x - q.x).map(i => i.t).join(' ').replace(/\s+/g, ' ').trim();
+  return rows.filter(r => r.desc.length).map(r => {
+    const ind = join(r.ind);
+    const o = { codice: r.codice, desc: join(r.desc), prezzo: r.prezzo, prima: '', sconto: '', unita: '', promo: 'OFFERTA', rimonta: false, dubbio: '', pagina: pageNo, indicazioni: ind };
+    const rm = ind.match(/RIMONTAT\w*\s+A\s*(?:€\s*)?(\d{1,4},\d{2})\s*(?:€\s*)?(L.?\s*ETTO|AL\s*PEZZO|AL\s*KG|AL\s*LITRO)?/i);
+    if (rm) {
+      o.prezzo = rm[1]; o.rimonta = true;
+      const u = (rm[2] || '').toUpperCase();
+      o.unita = /ETTO/.test(u) ? "all'etto" : /PEZZO/.test(u) ? 'al pz' : /KG/.test(u) ? 'al kg' : /LITRO/.test(u) ? 'al litro' : '';
+    } else if (r.prezzo) o.unita = 'al kg';
+    if (/PAYBACK/i.test(ind)) o.promo = 'FIDELITY';
+    const note = [];
+    if (!o.prezzo) note.push('prezzo nella foto del volantino');
+    if (/PRENDI/i.test(ind)) note.push('dinamica + prendi − spendi');
+    o.dubbio = note.join(' · ');
+    return o;
+  });
+}
+async function pageItems(pg) {
+  const vp = pg.getViewport({ scale: 1 }); const tc = await pg.getTextContent();
+  return tc.items.map(t => ({ x: t.transform[4], y: vp.height - t.transform[5], w: t.width, s: Math.hypot(t.transform[2], t.transform[3]), t: t.str }));
+}
+const promptDinPrezzi = list => `Questa pagina contiene la FOTO di una parte del volantino di un supermercato e una tabella di articoli.
+ATTENZIONE: i numeri della tabella (sfrido, MARG.% ...) NON sono prezzi: ignorali. Leggi i prezzi SOLO dalla foto del volantino.
+Per ogni articolo dell'elenco qui sotto che vedi nella foto, riporta esattamente quello che è stampato. Non inventare: se non lo trovi, non metterlo.
+Rispondi SOLO con un array JSON: [{"id": number, "prezzo": string (prezzo di vendita, es "1,39"), "prezzo_prima": string|null (barrato), "sconto": string|null (solo numero %), "unita": "all'etto"|"al pz"|"al kg"|null, "tipologia": "offerta"|"fidelity"|"prendi_spendi"|null, "soglia": string|null}]
+ELENCO:
+${list}`;
 const PROMPT_VOLLIST = `Questa è una pagina di un volantino di supermercato. Elenca TUTTI gli articoli con un prezzo, trascrivendo ESATTAMENTE quello che è stampato. Non inventare, non completare. Salta le promozioni "su tutta la linea" senza prezzo.
 Rispondi SOLO con un array JSON: [{"descrizione": string (senza grammatura), "grammatura": string|null, "prezzo": string (prezzo offerta, es "1,39"), "prezzo_prima": string|null (prezzo barrato), "sconto": string|null (solo numero %), "tipologia": "offerta"|"fidelity"|"prendi_spendi" (fidelity se c'è SPESAMICA PAYBACK / carta fedeltà; prendi_spendi per "+ PRENDI − SPENDI": fai una riga in più con il prezzo "A SOLI"), "soglia": string|null (es "3 KG O PIÙ", solo prendi_spendi), "unita": "all'etto"|"al pz"|"al kg"|"al litro"|null, "prezzo_kg": string|null}]`;
 async function readVolList() {
@@ -1177,6 +1292,7 @@ function volCell(r) {
     if (v.cert === 'media' && v.stato !== 'nf') c.push('<span class="chip warn">⚠️ da verificare</span>');
   }
   if (r.inVol === 'N' && !v) c.push('<span class="chip nf">📋 non a volantino</span>');
+  if (r.nota) c.push(`<span class="chip nf" title="${esc(r.nota)}">📝 ${esc(r.nota.length > 34 ? r.nota.slice(0, 34) + '…' : r.nota)}</span>`);
   if (r.esempio) c.push('<span class="chip ex">🧪 esempio</span>');
   if (r.dubbio) c.push(`<span class="chip warn" title="${esc(r.dubbio)}">🤔 ${esc(r.dubbio.slice(0, 30))}</span>`);
   const tip = v && v.desc ? ` title="${esc(v.desc + (v.gramm ? ' ' + v.gramm : '') + (v.fonte ? ' · ' + v.fonte : ''))}"` : '';
@@ -1268,6 +1384,7 @@ function totals() {
   $('#bSend').disabled = !n;
   $('#moti').textContent = n ? `💪 ${n} cartelli pronti in un clic · a mano sarebbero circa ${n * 3} minuti (stima 3 min a cartello)` : '👉 Scegli il formato delle righe e premi INVIA';
 }
+function goStep2() { setTimeout(() => { const sec = $('#list').closest('section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }
 function rowOf(el) { const it = el.closest('tr[data-id]'); return it ? state.rows.find(r => r.id === Number(it.dataset.id)) : null; }
 $('#list').addEventListener('input', e => {
   const k = e.target.dataset.k; const r = rowOf(e.target); if (!k || !r) return;
