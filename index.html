@@ -152,6 +152,10 @@ table.sheet{border-collapse:separate;border-spacing:0;font-size:13px;min-width:1
 .sheet th.fmtcol,.sheet td.fmtcol{position:sticky;right:0;z-index:1;box-shadow:-1px 0 0 var(--line)}
 .sheet th.fmtcol{z-index:3;color:var(--red)}
 .sheet select.fmt{font-weight:700;min-width:150px}
+.fc{display:flex;gap:6px;align-items:center}
+.cps{display:flex;align-items:center;gap:2px}
+.cps button{padding:4px 9px;font-size:15px;line-height:1}
+.cps input.w-cp{width:44px;text-align:center;padding:5px 2px}
 
 .sheet tr.grp td{font-family:var(--f-display);font-weight:800;font-stretch:85%;text-transform:uppercase;letter-spacing:.05em;color:var(--red);background:var(--field);padding:8px}
 .vc{display:flex;flex-wrap:wrap;gap:3px;width:210px}
@@ -1120,8 +1124,7 @@ function rowHtml(r, n) {
   <td>${t('fino', 'fi', 'w-s', finoText({}, state.fino, true).replace('Fino al ', '') || 'gg/mm')}</td>
   <td><input type="text" data-k="intest" id="in${r.id}" class="w-int" value="${esc(r.intest == null ? '' : r.intest)}" placeholder="${esc(headerText(Object.assign({}, r, { intest: null })))}" list="intList"></td>
   <td>${volCell(r)}</td>
-  <td><input type="number" min="1" max="99" class="num w-cp" data-k="copie" value="${esc(r.copie)}" id="cp${r.id}" aria-label="Copie"></td>
-  <td class="fmtcol">${sel('formato', [['', '⬜ non stampare'], ['A3', '🟥 A3'], ['G', '🟧 Stopper grande'], ['P', '🟦 Stopper piccolo']], 'fm', 'fmt' + (r.formato ? ' set f-' + r.formato : ''))}</td>
+  <td class="fmtcol"><div class="fc">${sel('formato', [['', '⬜ non stampare'], ['A3', '🟥 A3'], ['G', '🟧 Stopper grande'], ['P', '🟦 Stopper piccolo']], 'fm', 'fmt' + (r.formato ? ' set f-' + r.formato : ''))}<div class="cps" title="Quante copie stampare"><button class="small" data-act="cp-" aria-label="Una copia in meno">−</button><input type="number" min="1" max="99" class="num w-cp" data-k="copie" value="${esc(r.copie)}" id="cp${r.id}" aria-label="Copie"><button class="small" data-act="cp+" aria-label="Una copia in più">+</button></div></div></td>
   <td class="c"><button class="small del" data-act="del" aria-label="Elimina riga" title="Elimina riga">✕</button></td>
 </tr>`;
 }
@@ -1154,7 +1157,7 @@ function render() {
     extra = `<div class="found">Il codice <b>${esc(q)}</b> non è nell'elenco caricato.</div>`;
   }
   if (!state.rows.length) { L.innerHTML = extra + '<div class="empty">Nessun articolo. Carica un elenco al passo 1 oppure usa “+ Aggiungi riga”.</div>'; totals(); return; }
-  const HEAD = '<tr><th></th><th>#</th><th>Codice</th><th>Descrizione</th><th>Gramm.</th><th>Promo</th><th title="Solo Prendi/Spendi: quantità minima">Soglia</th><th title="Rimonta: usa il prezzo della griglia">Rim.</th><th>Sconto %</th><th>Prezzo</th><th>Barrato</th><th>Unità</th><th>Al Kg</th><th>Fino al</th><th>Intestazione</th><th>Volantino</th><th>Copie</th><th class="fmtcol">Formato</th><th></th></tr>';
+  const HEAD = '<tr><th></th><th>#</th><th>Codice</th><th>Descrizione</th><th>Gramm.</th><th>Promo</th><th title="Solo Prendi/Spendi: quantità minima">Soglia</th><th title="Rimonta: usa il prezzo della griglia">Rim.</th><th>Sconto %</th><th>Prezzo</th><th>Barrato</th><th>Unità</th><th>Al Kg</th><th>Fino al</th><th>Intestazione</th><th>Volantino</th><th class="fmtcol">Formato · copie</th><th></th></tr>';
   const wrapT = rows => `<div class="sheetwrap"><table class="sheet"><thead>${HEAD}</thead><tbody>${rows}</tbody></table></div>`;
   const daStampare = r => r.on && r.formato && !r.esempio;
   $('#nTutte').textContent = state.rows.length; $('#nStampa').textContent = state.rows.filter(daStampare).length;
@@ -1201,6 +1204,10 @@ $('#list').addEventListener('input', e => {
 $('#list').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; const r = rowOf(b); if (!r) return;
   if (b.dataset.act === 'del') { state.rows = state.rows.filter(x => x !== r); save(); render(); }
+  if (b.dataset.act === 'cp+' || b.dataset.act === 'cp-') {
+    r.copie = Math.max(1, Math.min(99, (parseInt(r.copie, 10) || 1) + (b.dataset.act === 'cp+' ? 1 : -1))); r.esempio = false;
+    const inp = b.parentElement.querySelector('[data-k="copie"]'); inp.value = r.copie; save(); totals();
+  }
   if (b.dataset.act === 'usa') { r.prezzo = b.dataset.p; r.vol.stato = 'man'; r.esempio = false; save(); render(); }
 });
 document.querySelectorAll('[data-all]').forEach(b => b.addEventListener('click', () => { state.rows.forEach(r => { if (!r.esempio) r.formato = b.dataset.all; }); save(); render(); }));
