@@ -1,5 +1,5 @@
 // Service worker: tiene l'app e le librerie sul dispositivo, così funziona anche senza rete
-const CACHE = 'cartelli-222ce3-10071559';
+const CACHE = 'cartelli-2770d8-10071605';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-180.png'];
 const LIBS = [
  "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",
