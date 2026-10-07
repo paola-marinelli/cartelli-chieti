@@ -298,12 +298,15 @@ const RED = '#FF0000';
 const PB_BLUE = '#4695D2', PB_RED = '#E30613'; // colori del volantino (bollino Payback, Prendi/Spendi)
 const PAGE = { A3: { w: 1190.55, h: 841.89 }, A4: { w: 595.28, h: 841.89 } };
 const G_TOPS = [19, 218, 429, 623]; // modello: 13/212/423/617, abbassati di 6 pt per il margine della stampante
-const P_COLS = [92, 310];
-const P_ROWS = [
-  { d: 99, rect: 137, price: 278, fino: 297 },
-  { d: 342, rect: 371, price: 506, fino: 529 },
-  { d: 570, rect: 602, price: 733, fino: 750 },
-];
+const CM = 28.3465;
+// stopper piccoli su carta PRETAGLIATA A4: 6 etichette 7,5 x 8 cm, margini 2,8 cm sopra, 2,9 sotto, 3 a sinistra e a destra
+const P_CELL = { w: 7.5 * CM, h: 8 * CM, left: 3 * CM, top: 2.8 * CM };
+const P_W = 196; // larghezza del contenuto, centrata nell'etichetta
+function pPos(slot) {
+  const cx = P_CELL.left + (slot % 2) * P_CELL.w, cy = P_CELL.top + Math.floor(slot / 2) * P_CELL.h;
+  const D = cy + (P_CELL.h - 217) / 2 + 16; // blocco alto 217 pt (descrizione → "Fino al") centrato in verticale
+  return { x0: cx + (P_CELL.w - P_W) / 2, R: { d: D, rect: D + 38, price: D + 179, fino: D + 198 } };
+}
 const CAP = 0.716; // altezza maiuscole Arial/Helvetica in rapporto al corpo
 
 function num(s) {
@@ -402,7 +405,7 @@ function fitDescG(p, r) {
   return 14;
 }
 function fitHeadG(p, r) { return fitSize(p, headerText(r), 445, 50, 18, true); }
-function fitDescP(p, r) { const d = descFull(r); for (let s = 22; s >= 13; s--) { const l = wrap(p, d, [205], s, true); if (l.length <= 2 && fitsAll(p, l, [205], s, true)) return s; } return 13; }
+function fitDescP(p, r) { const d = descFull(r); for (let s = 22; s >= 13; s--) { const l = wrap(p, d, [P_W], s, true); if (l.length <= 2 && fitsAll(p, l, [P_W], s, true)) return s; } return 13; }
 function headPartsP(p, h, hs) {
   const m = h.match(/^(.*?)\s*[–-]\s*(\d+(?:[.,]\d+)?\s*%)\s*$/);
   return m ? [...wrap(p, m[1], [112], hs, true), '-' + m[2].replace(/\s/g, '')] : wrap(p, h, [112], hs, true);
@@ -536,10 +539,10 @@ function prendiBand(p, cx, y, H, maxW) {
 function sogliaText(r) { const s = String(r.soglia || '').trim().toUpperCase(); return s ? s + ' A SOLI' : ''; }
 
 function drawP(p, r, slot, ctx) {
-  const x0 = P_COLS[slot % 2], R = P_ROWS[Math.floor(slot / 2)];
+  const { x0, R } = pPos(slot);
   const desc = descFull(r);
   const size = uSize(ctx, r, 'desc', fitDescP(p, r));
-  const lines = wrap(p, desc, [205], size, true);
+  const lines = wrap(p, desc, [P_W], size, true);
   lines.forEach((l, n) => p.text(l, x0, R.d + n * size * 0.98, { size, bold: true }));
 
   const custom = !(r.intest == null || String(r.intest).trim() === '');
@@ -556,12 +559,12 @@ function drawP(p, r, slot, ctx) {
   const prima = money(r.prima);
   if (prima) strike(p, `${prima} €`, x0 + 12, R.rect + 72, 16, false, 0.9);
   const sg = r.promo === 'PRENDI' ? sogliaText(r) : '';
-  if (sg && !prima) p.text(sg, x0, R.rect + 71, { size: fitSize(p, sg, 200, 13, 7, true), bold: true, color: PB_RED });
+  if (sg && !prima) p.text(sg, x0, R.rect + 71, { size: fitSize(p, sg, P_W, 13, 7, true), bold: true, color: PB_RED });
   bigPrice(p, r.prezzo, { right: x0 + 181, base: R.price, si: 88, sd: 45, se: 30, gap: 3, minLeft: x0 });
   const f = finoText(r, ctx.fino, false);
   if (f) p.text(f, x0 + 10, R.fino, { size: 12 });
   const us = unitShort(r.unita);
-  if (us) p.text(us, x0 + 203, R.fino, { size: 12, align: 'right' });
+  if (us) p.text(us, x0 + P_W, R.fino, { size: 12, align: 'right' });
 }
 
 // pagine: A3 = 1 cartello per foglio; G = 4 per foglio A4; P = 6 per foglio A4
@@ -1129,7 +1132,7 @@ function drawThumb(el, r) {
   let box;
   if (r.formato === 'A3') box = { x: 0, y: 0, w: PAGE.A3.w, h: PAGE.A3.h };
   else if (r.formato === 'G') box = { x: 55, y: 5, w: 500, h: 205 };
-  else box = { x: P_COLS[0] - 10, y: P_ROWS[0].d - 26, w: 225, h: P_ROWS[0].fino - P_ROWS[0].d + 34 };
+  else box = { x: P_CELL.left, y: P_CELL.top, w: P_CELL.w, h: P_CELL.h };
   const s = cv.width / box.w; cv.height = Math.round(box.h * s);
   c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
   c.setTransform(s, 0, 0, s, -box.x * s, -box.y * s);
