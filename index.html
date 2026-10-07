@@ -309,10 +309,9 @@ button.usa{padding:2px 7px;font-size:11px;border-color:var(--bad);color:var(--ba
 const RED = '#FF0000';
 const PB_BLUE = '#4695D2', PB_RED = '#E30613'; // colori del volantino (bollino Payback, Prendi/Spendi)
 const PAGE = { A3: { w: 1190.55, h: 841.89 }, A4: { w: 595.28, h: 841.89 } };
-// stopper GRANDI su carta pretagliata A4: 4 etichette 14,5 x 6,1 cm una sotto l'altra, margini 2,1 sopra e sotto, 3,4 sx, 3,1 dx.
-// Spazio tra un'etichetta e l'altra: 0,2 cm.
-const G_CELL = { w: 14.5 * 28.3465, h: 6.1 * 28.3465, left: 3.4 * 28.3465, top: 2.1 * 28.3465, gap: 0.2 * 28.3465 }; // spazio tra le etichette 0,2 cm (Paola)
-// il disegno del modello (fascia 466 pt, alto ~198 pt) viene ridotto e centrato in ogni etichetta
+// stopper GRANDI: 4 per foglio A4, ognuno 14,5 x 6,5 cm dentro un riquadro tratteggiato per il taglio,
+// attaccati tra loro (una linea di taglio in comune) e centrati sul foglio: 3,25 cm ai lati, 1,85 cm sopra e sotto.
+const G_CELL = { w: 14.5 * 28.3465, h: 6.5 * 28.3465, left: (21 - 14.5) / 2 * 28.3465, top: (29.7 - 4 * 6.5) / 2 * 28.3465, gap: 0 };
 const G_K = Math.min((G_CELL.w - 12) / 466, (G_CELL.h - 8) / 198);
 function gCell(slot) { return { x: G_CELL.left, y: G_CELL.top + slot * (G_CELL.h + G_CELL.gap) }; }
 const CM = 28.3465;
@@ -472,6 +471,7 @@ function drawA3(p, r, ctx) {
 
 function drawG(p0, r, slot, ctx) {
   const c = gCell(slot);
+  if (p0.dashRect) p0.dashRect(c.x, c.y, G_CELL.w, G_CELL.h, 0.6); // riquadro tratteggiato per il taglio
   const p = new ScaledPainter(p0, G_K, c.x + (G_CELL.w - 466 * G_K) / 2 - 70 * G_K, c.y + (G_CELL.h - 198 * G_K) / 2);
   const R = 0; // coordinate del modello, con il cartello che parte da 0
   p.rect(70, R, 466, 60, RED, 12);
@@ -677,6 +677,7 @@ class PdfPainter {
   rect(x, y, w, h, col, r) { this.d.setFillColor(col); if (r) this.d.roundedRect(x, y, w, h, r, r, 'F'); else this.d.rect(x, y, w, h, 'F'); }
   line(x1, y1, x2, y2, lw) { this.d.setDrawColor('#000000'); this.d.setLineWidth(lw); this.d.line(x1, y1, x2, y2); }
   ellipse(cx, cy, rx, ry, col) { this.d.setFillColor(col); this.d.ellipse(cx, cy, rx, ry, 'F'); }
+  dashRect(x, y, w, h, lw) { const d = this.d; d.setDrawColor('#8A8A8A'); d.setLineWidth(lw); d.setLineDashPattern([4, 3], 0); d.rect(x, y, w, h, 'S'); d.setLineDashPattern([], 0); }
 }
 function buildPdf(jsPDF, fmt, items, ctx) {
   const pages = paginate(items, fmt);
@@ -701,6 +702,7 @@ class CanvasPainter {
   }
   line(x1, y1, x2, y2, lw) { const c = this.c; c.strokeStyle = '#000'; c.lineWidth = lw; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
   ellipse(cx, cy, rx, ry, col) { const c = this.c; c.fillStyle = col; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill(); }
+  dashRect(x, y, w, h, lw) { const c = this.c; c.save(); c.strokeStyle = '#8A8A8A'; c.lineWidth = lw; c.setLineDash([4, 3]); c.strokeRect(x, y, w, h); c.restore(); }
 }
 
 /* ---------- stato ---------- */
@@ -1587,7 +1589,7 @@ function makeFiles() {
 }
 const EVVIVA = ['🎉 Fatto! Pausa caffè meritata ☕', '🚀 Cartelli pronti in un lampo!', '👏 Ottimo lavoro: prezzi identici al volantino.', '🌟 Un altro volantino sistemato senza fatica!', '😎 Lavoro snello, negozio in ordine.'];
 const evviva = () => EVVIVA[Math.floor(Math.random() * EVVIVA.length)];
-const CARTA = { A3: 'carta A3 orizzontale', A4O: 'carta A4 orizzontale', A4V: 'carta A4 verticale', G: 'carta A4 pretagliata (4 etichette)', P: 'carta A4 pretagliata (6 etichette)' };
+const CARTA = { A3: 'carta A3 orizzontale', A4O: 'carta A4 orizzontale', A4V: 'carta A4 verticale', G: 'carta A4 verticale (4 da ritagliare)', P: 'carta A4 pretagliata (6 etichette)' };
 function openSend() {
   const all = FORMATI.flatMap(f => printable(f));
   const miss = all.filter(r => !money(r.prezzo) || (r.vol && r.vol.stato === 'check'));
