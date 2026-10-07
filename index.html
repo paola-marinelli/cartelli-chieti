@@ -353,7 +353,7 @@ function kgValue(r) {
   if (r.unita === "all'etto") { const n = num(r.prezzo); if (!isNaN(n)) return { v: (Math.round(n * 100) / 10).toFixed(2).replace('.', ','), calc: true }; }
   return null;
 }
-function kgText(r) { if (r.unita === 'al kg') return ''; const k = kgValue(r); return k ? `al Kg ${k.v} €` : ''; }
+function kgText(r) { if (r.unita === 'al kg') return ''; if (money(r.kgL)) return `al litro ${money(r.kgL)} €`; const k = kgValue(r); return k ? `al Kg ${k.v} €` : ''; }
 function dateParts(s) {
   if (!s) return null;
   let m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -705,7 +705,7 @@ const ESEMPI = [
 ];
 let uid = 1;
 function newRow(o) {
-  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', propria: false, nota: '', rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
+  return Object.assign({ id: uid++, on: true, formato: '', copie: 1, desc: '', gramm: '', promo: 'OFFERTA', soglia: '', propria: false, nota: '', kgL: '', rimonta: false, griglia: null, inVol: '', unita: '', prezzo: '', prima: '', sconto: '', kg: '', intest: null, fino: '', codice: '', dubbio: '', vol: null, esempio: false }, o);
 }
 let state = { fino: '', tipo: 'OFFERTA', vista: 'tutte', rows: [] };
 function save() { try { localStorage.setItem('cartelli-chieti', JSON.stringify(state)); } catch (e) {} }
@@ -783,7 +783,14 @@ async function fileText(file) {
     return wb.SheetNames.map(sn => { const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' }); return { sheet: sn, rows }; });
   }
   if (n.endsWith('.docx')) { await loadScript(LIB.docx); const r = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }); return r.value; }
-  if (n.endsWith('.txt')) return await file.text();
+  if (n.endsWith('.txt')) {
+    const buf = await file.arrayBuffer();
+    let txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (x) { txt = new TextDecoder('windows-1252').decode(buf); }
+    const lines = txt.split(/\r\n|\r|\n/);
+    const sep = (lines[0].match(/\t/g) || []).length >= 3 ? '\t' : (lines[0].match(/;/g) || []).length >= 3 ? ';' : null;
+    if (sep) return [{ sheet: 'testo', rows: lines.filter(l => l.trim()).map(l => l.split(sep)) }];
+    return txt;
+  }
   return null;
 }
 const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name);
@@ -1492,23 +1499,34 @@ $('#bXlsOut').addEventListener('click', async () => {
     const u = $('#bUndo'); if (u) u.onclick = () => { if (undoRows) { state.rows = undoRows; undoRows = null; save(); render(); st.textContent = '↩️ Elenco completo ripristinato.'; } };
   } catch (e) { if (e && e.code === 'cancelled') { st.textContent = ''; return; } st.classList.add('err'); st.textContent = 'Excel non creato: ' + (e.code || e.message || e); }
 });
-// Tabulato promo del gestionale (codice_interno, descrizione_articolo, pv_attuale, pv_promozionale, sconto, tipo_promozione, volantino)
+// Tabulato promo del gestionale: XLS vero, oppure testo con tabulazioni (anche se si chiama .xls/.txt).
+// Colonne con "_" o con spazi: CODICE ARTICOLO / codice_interno, DESCRIZIONE ARTICOLO, UNITA' MISURA, PEZZATURA, TIPO PROMOZIONE,
+// PV ATTUALE, PV PROMOZIONALE, SCONTO, PV KG LIT, VOLANTINO. MARGINE e PREZZO CESSIONE non si usano MAI.
 function importTabulato(data) {
-  const hi = data.findIndex(r => r.some(c => /descrizione/i.test(c)) && r.some(c => /pv_promo|prezzo.?promo/i.test(c)));
+  const hi = data.findIndex(r => r.some(c => /descrizione/i.test(c)) && r.some(c => /pv[\s_]*promo|prezzo.?promo/i.test(c)));
   if (hi < 0) return null;
   const h = data[hi].map(x => String(x).trim().toLowerCase());
   const col = re => h.findIndex(c => re.test(c));
-  const cC = col(/^codice_interno$|^codice$/), cD = col(/descrizione/), cU = col(/unita_misura|^um$/), cT = col(/tipo_promo|tipologia/),
-    cA = col(/pv_attuale|prezzo_attuale/), cP = col(/pv_promo|prezzo.?promo/), cS = col(/^sconto/), cV = col(/^volantino$/);
-  const U = { PZ: 'al pz', KG: 'al kg', HG: "all'etto", LT: 'al litro', L: 'al litro' };
-  return data.slice(hi + 1).filter(r => String(r[cD] || '').trim()).map(r => {
+  const cC = col(/^codice[\s_]*(interno|articolo)?$/), cD = col(/descrizione/), cU = col(/unita.?[\s_]*misura|^um$/), cT = col(/tipo[\s_]*promo|tipologia/),
+    cA = col(/pv[\s_]*attuale|prezzo[\s_]*attuale/), cP = col(/pv[\s_]*promo|prezzo.?promo/), cS = col(/^sconto/), cV = col(/^volantino$/),
+    cZ = col(/pezzatura/), cK = col(/pv[\s_]*kg/);
+  const U = { PZ: 'al pz', KG: 'al kg', HG: "all'etto", LT: 'al litro', L: 'al pz', ML: 'al pz', G: 'al pz', GR: 'al pz', CL: 'al pz' };
+  const rows = data.slice(hi + 1).filter(r => String(r[cD] || '').trim());
+  const volS = cV >= 0 && rows.some(r => /^S$/i.test(String(r[cV] || '').trim()));
+  return rows.map(r => {
     const g = i => i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim();
-    const pro = money(g(cP)), att = money(g(cA)), sc = num(g(cS));
+    const pro = money(g(cP)), att = money(g(cA)), sc = num(g(cS)), um = g(cU).toUpperCase();
+    const pz = num(g(cZ));
+    // grammatura dalla pezzatura: 150 g, 50 ml, 1 l (solo per confezioni a peso/volume)
+    const gramm = /^(G|GR|ML|CL|L|LT)$/.test(um) && pz > 0 ? String(+pz.toFixed(3)).replace('.', ',') + ' ' + (um === 'GR' ? 'G' : um === 'LT' ? 'L' : um) : '';
+    const kgv = /^(G|GR|KG)$/.test(um) ? money(g(cK)) : '';
+    const lit = /^(ML|CL|L|LT)$/.test(um) ? money(g(cK)) : '';
     return {
-      codice: g(cC), desc: g(cD), prezzo: pro || g(cP),
+      codice: g(cC), desc: g(cD), gramm, prezzo: pro || g(cP),
       prima: att && pro && num(att) > num(pro) ? att : '',
-      sconto: sc > 0 ? pct(g(cS)) : '', promo: /fidel|payback/i.test(g(cT)) ? 'FIDELITY' : 'OFFERTA',
-      unita: U[g(cU).toUpperCase()] || '', inVol: /^[SN]$/i.test(g(cV)) ? g(cV).toUpperCase() : '',
+      sconto: sc > 0 ? pct(g(cS)) : '', promo: /fid|payback/i.test(g(cT)) ? 'FIDELITY' : 'OFFERTA',
+      unita: U[um] || '', kg: um === 'KG' ? '' : kgv, kgL: lit,
+      inVol: /^[SN]$/i.test(g(cV)) ? g(cV).toUpperCase() : (volS ? 'N' : ''),
     };
   });
 }
