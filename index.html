@@ -321,7 +321,7 @@ const P_W = 196; // larghezza del contenuto, centrata nell'etichetta
 function pPos(slot) {
   const cx = P_CELL.left + (slot % 2) * P_CELL.w, cy = P_CELL.top + Math.floor(slot / 2) * P_CELL.h;
   const D = cy + (P_CELL.h - 217) / 2 + 16 + 0.2 * CM; // blocco alto 217 pt centrato, poi abbassato di 0,2 cm (Paola: la scritta cadeva sul taglio)
-  return { x0: cx + (P_CELL.w - P_W) / 2, R: { d: D, rect: D + 38, price: D + 179, fino: D + 195 } };
+  return { x0: cx + (P_CELL.w - P_W) / 2, R: { d: D, rect: D + 38, box: D + 38 + 0.2 * CM, price: D + 179, fino: D + 195 } }; // box = riquadro rosso/logo, 0,2 cm più giù (Paola 08/10)
 }
 const CAP = 0.716; // altezza maiuscole Arial/Helvetica in rapporto al corpo
 
@@ -568,19 +568,19 @@ function drawP(p, r, slot, ctx) {
 
   const custom = !(r.intest == null || String(r.intest).trim() === '');
   const badge = !custom && (r.promo === 'FIDELITY' || r.promo === 'PRENDI');
-  if (badge && r.promo === 'PRENDI') prendiLogo(p, x0, R.rect, 122, 56);
-  else if (badge) paybackBadge(p, x0, R.rect, r); else p.rect(x0, R.rect, 122, 56, RED, 10);
+  if (badge && r.promo === 'PRENDI') prendiLogo(p, x0, R.box, 122, 56);
+  else if (badge) paybackBadge(p, x0, R.box, r); else p.rect(x0, R.box, 122, 56, RED, 10);
   const h = headerText(r, ctx.tipo);
   const hs = uSize(ctx, r, 'head', fitHeadP(p, r));
   const hl = headPartsP(p, h, hs);
   if (badge) { /* già disegnato */ }
-  else if (hl.length === 1) p.text(hl[0], x0 + 61, R.rect + 28 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
-  else hl.forEach((l, n) => p.text(l, x0 + 61, R.rect + 25 + n * (hs * 1.15), { size: hs, bold: true, color: '#FFFFFF', align: 'center' }));
+  else if (hl.length === 1) p.text(hl[0], x0 + 61, R.box + 28 + CAP * hs / 2, { size: hs, bold: true, color: '#FFFFFF', align: 'center' });
+  else hl.forEach((l, n) => p.text(l, x0 + 61, R.box + 25 + n * (hs * 1.15), { size: hs, bold: true, color: '#FFFFFF', align: 'center' }));
 
   const prima = money(r.prima);
-  if (prima) strike(p, `${prima} €`, x0 + 12, R.rect + 72, 16, false, 0.9);
+  if (prima) strike(p, `${prima} €`, x0 + 12, R.rect + 77, 16, false, 0.9);
   const sg = r.promo === 'PRENDI' ? sogliaText(r) : '';
-  if (sg && !prima) p.text(sg, x0, R.rect + 71, { size: fitSize(p, sg, P_W, 13, 7, true), bold: true, color: PB_RED });
+  if (sg && !prima) p.text(sg, x0, R.rect + 77, { size: fitSize(p, sg, P_W, 13, 7, true), bold: true, color: PB_RED });
   bigPrice(p, r.prezzo, { right: x0 + 181, base: R.price, si: 88, sd: 45, se: 30, gap: 3, minLeft: x0 });
   const f = finoText(r, ctx.fino, false);
   if (f) p.text(f, x0 + 10, R.fino, { size: 12 });
