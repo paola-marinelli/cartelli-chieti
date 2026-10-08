@@ -1110,7 +1110,7 @@ function volExtract(items, pageNo) {
   const T = s => s.replace(/\s+/g, ' ').trim();
   const it = items.map(i => ({ ...i, t: T(i.t) })).filter(i => i.t);
   const isPriceSmall = t => /^\d{1,4},\d{2}(\s*€)?$/.test(t);
-  const NOISE = /O\s*PI[UÙ]$|^a lavaggio$|^\d+\s*pezz[oi]$|^-\s|^(SPESAMICA|PAYBACK|GUARDA|CHE|PREZZO!?|SU TUTTA LA LINEA|A SOLI)$|^al\s*kg|^all.?\s*etto|^al\s*pezzo|^al\s*litro|^[-%€]$|^\d+$|^-\s*\d+\s*%$/i;
+  const NOISE = /O\s*PI[UÙ]$|^a lavaggio$|^\d+\s*pezz[oi]$|^pezz[oi]$|^-\s|^(SPESAMICA|PAYBACK|GUARDA|CHE|PREZZO!?|SU TUTTA LA LINEA|A SOLI)$|^al\s*kg|^all.?\s*etto|^al\s*pezzo|^al\s*litro|^[-%€]$|^\d+$|^-\s*\d+\s*%$/i;
   // prezzi grandi
   const anchors = [];
   it.forEach(a => {
@@ -1130,6 +1130,8 @@ function volExtract(items, pageNo) {
     if (b) { b.lines.push(i); b.bottom = Math.max(b.bottom, i.y); } else blocks.push({ x: i.x, top: i.y, bottom: i.y, lines: [i] });
   });
   blocks.forEach(b => b.lines.sort((p, q) => p.y - q.y));
+  // bollini del volantino ("MARE ADRIATICO", "IN GASTRONOMIA", "NOVITÀ"): scritte brevi tutte maiuscole, non sono descrizioni
+  for (let k = blocks.length - 1; k >= 0; k--) { const t = blocks[k].lines.map(l => l.t).join(' '); if (t === t.toUpperCase() && t.split(/\s+/).length <= 3 && /[A-Z]/.test(t)) blocks.splice(k, 1); }
   // abbinamento prezzo ↔ descrizione (più vicina sopra, stessa colonna)
   const pairs = [];
   anchors.forEach((a, ai) => blocks.forEach((b, bi) => {
