@@ -320,8 +320,8 @@ const P_CELL = { w: 7.5 * CM, h: 8 * CM, left: 3 * CM, top: 2.8 * CM };
 const P_W = 196; // larghezza del contenuto, centrata nell'etichetta
 function pPos(slot) {
   const cx = P_CELL.left + (slot % 2) * P_CELL.w, cy = P_CELL.top + Math.floor(slot / 2) * P_CELL.h;
-  const D = cy + (P_CELL.h - 217) / 2 + 16; // blocco alto 217 pt (descrizione → "Fino al") centrato in verticale
-  return { x0: cx + (P_CELL.w - P_W) / 2, R: { d: D, rect: D + 38, price: D + 179, fino: D + 198 } };
+  const D = cy + (P_CELL.h - 217) / 2 + 16 + 0.2 * CM; // blocco alto 217 pt centrato, poi abbassato di 0,2 cm (Paola: la scritta cadeva sul taglio)
+  return { x0: cx + (P_CELL.w - P_W) / 2, R: { d: D, rect: D + 38, price: D + 179, fino: D + 195 } };
 }
 const CAP = 0.716; // altezza maiuscole Arial/Helvetica in rapporto al corpo
 
@@ -599,7 +599,7 @@ class ScaledPainter {
   line(a, b, c, d, lw) { this.p.line(this.ox + a * this.k, this.oy + b * this.k, this.ox + c * this.k, this.oy + d * this.k, lw * this.k); }
   ellipse(cx, cy, rx, ry, c) { this.p.ellipse(this.ox + cx * this.k, this.oy + cy * this.k, rx * this.k, ry * this.k, c); }
 }
-const offertaCase = h => h.replace(/^OFFERTA\b/, 'Offerta');
+const offertaCase = h => h; // stampato maiuscolo come nell'A3 (Paola)
 function fitDescA4O(p, r) { const d = descFull(r); for (const s of [80, 72, 64, 58, 52]) if (wrap(p, d, [1090], s, true).length <= 2) return s; return 52; }
 function fitHeadA4O(p, r) { return fitSize(p, offertaCase(headerText(r)), 1130, 199, 40, true); }
 function drawA4O(p0, r, ctx) {
