@@ -1,8 +1,7 @@
 // Service worker: tiene l'app e le librerie sul dispositivo, così funziona anche senza rete
-const CACHE = 'cartelli-aaadfe-10081102';
+const CACHE = 'cartelli-7a039d-10091114';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-180.png'];
 const LIBS = [
- "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",
  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
  "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",

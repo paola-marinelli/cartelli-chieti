@@ -1388,7 +1388,9 @@ function render() {
     html = wrapT(FORMATI.map(f => { const g = vis.filter(([r]) => r.formato === f); return g.length ? `<tr class="grp g-${f}"><td colspan="20">${FMT_ICO[f]} ${NOMI[f]} · ${g.length}</td></tr>` + g.map(([r, i]) => rowHtml(r, i + 1)).join('') : ''; }).join(''));
     if (!vis.length) html = '<div class="empty">Nessun cartello da stampare: scegli un formato nelle righe (vista “Tutto l\'elenco”).</div>';
   } else html = vis.length ? wrapT(vis.map(([r, i]) => rowHtml(r, i + 1)).join('')) : (extra ? '' : '<div class="empty">Nessuna riga corrisponde alla ricerca.</div>');
+  const sw0 = L.querySelector('.sheetwrap'), keep = sw0 ? { t: sw0.scrollTop, l: sw0.scrollLeft } : null, wy = window.scrollY;
   L.innerHTML = extra + html;
+  const sw1 = L.querySelector('.sheetwrap'); if (keep && sw1) { sw1.scrollTop = keep.t; sw1.scrollLeft = keep.l; } window.scrollTo(window.scrollX, wy); // resta dove sei
   totals();
 }
 function totals() {
@@ -1479,31 +1481,22 @@ $('#bXlsOut').addEventListener('click', async () => {
   if (!rows.length) { st.classList.add('err'); st.textContent = 'Nessun cartello selezionato: scegli il formato delle righe da stampare.'; return; }
   try {
     st.textContent = 'Preparo l\'Excel…';
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
-    const wb = new window.ExcelJS.Workbook(); const ws = wb.addWorksheet('ELENCO CARTELLI', { views: [{ state: 'frozen', ySplit: 1 }] });
-    ws.columns = XL_COLS.map(([h, , w]) => ({ header: h, width: w }));
+    // formato Excel 97-2003 (.xls): lo apre anche Excel 2007 del negozio (Paola 09/10)
+    await loadScript(LIB.xlsx);
     const vs = { ok: 'UGUALE ALLA GRIGLIA', diff: 'DIVERSO DALLA GRIGLIA', nf: 'NON TROVATO', check: 'DA CONTROLLARE', man: 'CONTROLLATO A MANO' };
+    const aoa = [XL_COLS.map(c => c[0])];
     rows.forEach(r => {
       const kv = kgValue(r);
-      ws.addRow(XL_COLS.map(([, k]) => k === 'formato' ? XL_FMT[r.formato || ''] : k === 'kg' ? (r.kg || (kv && kv.calc ? kv.v : '')) : k === 'intest' ? headerText(r, state.tipo)
+      aoa.push(XL_COLS.map(([, k]) => k === 'formato' ? XL_FMT[r.formato || ''] : k === 'kg' ? (r.kg || (kv && kv.calc ? kv.v : '')) : k === 'intest' ? headerText(r, state.tipo)
         : k === 'fino' ? (r.fino || finoText({}, state.fino, true).replace('Fino al ', '')) : k === 'rimonta' ? (r.rimonta ? 'SI' : '') : k === 'propria' ? (r.propria ? 'SI' : '') : k === 'pg' ? (r.griglia ? r.griglia.prezzo : r.prezzo) || '' : k === 'vp' ? (r.vol && r.vol.prezzo || '') : k === 'vs' ? (r.vol ? vs[r.vol.stato] || '' : '') : k === 'copie' ? (parseInt(r.copie, 10) || 1) : (r[k] == null ? '' : String(r[k]))));
     });
-    const hr = ws.getRow(1); hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }; hr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3000F' } }; hr.height = 22;
-    const fc = XL_COLS.findIndex(c => c[1] === 'formato') + 1, vc = XL_COLS.findIndex(c => c[1] === 'vs') + 1, uc = XL_COLS.findIndex(c => c[1] === 'unita') + 1, cc = XL_COLS.findIndex(c => c[1] === 'codice') + 1;
-    for (let i = 2; i <= rows.length + 1; i++) {
-      const cell = ws.getCell(i, fc);
-      cell.dataValidation = { type: 'list', allowBlank: false, formulae: ['"A3,A4 ORIZZONTALE,A4 VERTICALE,STOPPER GRANDE,STOPPER PICCOLO,NON STAMPARE"'], showErrorMessage: true, errorTitle: 'Formato', error: 'Scegli dalla lista' };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } }; cell.font = { bold: true };
-      ws.getCell(i, uc).dataValidation = { type: 'list', allowBlank: true, formulae: ['"all\'etto,al pz,al kg,al litro"'] };
-      ws.getCell(i, cc).numFmt = '@';
-      ws.getCell(i, XL_COLS.findIndex(c => c[1] === 'promo') + 1).dataValidation = { type: 'list', allowBlank: false, formulae: ['"OFFERTA,FIDELITY,PRENDI,WEEKEND"'] };
-      const v = ws.getCell(i, vc); if (v.value === 'DIVERSO DALLA GRIGLIA') v.font = { bold: true, color: { argb: 'FFC4000D' } }; else if (v.value === 'UGUALE ALLA GRIGLIA') v.font = { color: { argb: 'FF1D7A3E' } };
-      if (!money(rows[i - 2].prezzo)) ws.getCell(i, XL_COLS.findIndex(c => c[1] === 'prezzo') + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
-    }
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: rows.length + 1, column: XL_COLS.length } };
-    const buf = await wb.xlsx.writeBuffer();
+    const ws = window.XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = XL_COLS.map(c => ({ wch: c[2] }));
+    ws['!autofilter'] = { ref: 'A1:' + window.XLSX.utils.encode_col(XL_COLS.length - 1) + (rows.length + 1) };
+    const wb = window.XLSX.utils.book_new(); window.XLSX.utils.book_append_sheet(wb, ws, 'ELENCO CARTELLI');
+    const buf = window.XLSX.write(wb, { bookType: 'biff8', type: 'array' });
     const fp = dateParts(state.fino);
-    await saveFile(`ELENCO CARTELLI${fp ? ' fino al ' + fp.d + '-' + fp.m : ''}.xlsx`, new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    await saveFile(`ELENCO CARTELLI${fp ? ' fino al ' + fp.d + '-' + fp.m : ''}.xls`, new Blob([buf], { type: 'application/vnd.ms-excel' }));
     const tolte = state.rows.length - rows.length;
     undoRows = tolte ? state.rows : null; state.rows = rows; state.vista = 'tutte'; save(); render();
     st.innerHTML = `💾 Salvato: ${rows.length} cartelli da stampare` + (tolte ? `, tolte ${tolte} righe non selezionate. <button class="small" id="bUndo">↩️ Annulla</button>` : '.');
